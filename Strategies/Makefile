@@ -1,5 +1,7 @@
+## --- Local Configuration (Edit, if needed)
 prefix = $(HOME)/JForex/Strategies
 
+## --- Main Code (MODIFY, ONLY IF YOU KNOW WHAT YOU'RE DOING)
 .PHONY: all sync
 all: sync
 sync:
