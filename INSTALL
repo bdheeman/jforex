@@ -1,0 +1,16 @@
+INSTALL HOWTO
+=============
+
+All you need to install any of the Indicators and, or Strategies
+contained in this repository is just copy <whatever>.java files to your
+$HOME/JForex/Indicators and, or $HOME/JForex/Strategies respectively.
+
+Open the indicator or strategy in your Dukascopy/JForex platform and
+compile it; the platform will auto recompile updated strategies, but
+indicators must/should be recompiled manually.
+
+After that, you must use GNU make to sync between your updates and, or
+changes from this source directory.
+
+-- 
+Balwinder S "bdheeman" Dheeman <bdheeman/AT/gmail.com>

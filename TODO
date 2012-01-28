@@ -1,0 +1,8 @@
+TODO
+====
+
+ * Implement the Trend Strength Index [TSI] indicator; current one is just
+   a skeleton; see <http://engineering-returns.com/tsi/> for details.
+
+-- 
+Balwinder S "bdheeman" Dheeman <bdheeman/AT/gmail.com>
