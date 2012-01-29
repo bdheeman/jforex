@@ -25,7 +25,6 @@ import java.text.SimpleDateFormat;
 
 import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
-import com.dukascopy.api.IIndicators.AppliedPrice;
 
 public class t43_rc2 implements IStrategy {
     private final String id = "t43_rc2";
@@ -140,14 +139,14 @@ public class t43_rc2 implements IStrategy {
             CloseOrders(IEngine.OrderCommand.SELL);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
                                               askPrice - getPipPrice(stopLossPips), askPrice + getPipPrice(takeProfitPips));
-            order.waitForUpdate(2000);
+            order.waitForUpdate(200);
         }
         // SELL
         if(te[0][LOOK_BACK-2] > 0 && Double.isNaN(te[0][LOOK_BACK-1])) {
             CloseOrders(IEngine.OrderCommand.BUY);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
                                               bidPrice + getPipPrice(stopLossPips), bidPrice - getPipPrice(takeProfitPips));
-            order.waitForUpdate(2000);
+            order.waitForUpdate(200);
         }
     }
 

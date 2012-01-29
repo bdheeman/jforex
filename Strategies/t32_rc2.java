@@ -180,7 +180,7 @@ public class t32_rc2 implements IStrategy {
             sellActive = false;
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
                                               askPrice - getPipPrice(stopLossPips), askPrice + getPipPrice(takeProfitPips));
-            order.waitForUpdate(2000);
+            order.waitForUpdate(200);
             buyActive = true;
         }
         // SELL
@@ -192,7 +192,7 @@ public class t32_rc2 implements IStrategy {
             buyActive = false;
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
                                               bidPrice + getPipPrice(stopLossPips), bidPrice - getPipPrice(takeProfitPips));
-            order.waitForUpdate(2000);
+            order.waitForUpdate(200);
             sellActive = true;
         }
     }
