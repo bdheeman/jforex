@@ -44,7 +44,7 @@ public class DMA implements IIndicator, IDrawingIndicator {
     private IndicatorInfo indicatorInfo;
 
     private int fastTimePeriod = 5;
-    private int slowTimePeriod = 11;
+    private int slowTimePeriod = 13;
 
     public static final Color DARK_GREEN = new Color(0x00, 0x66, 0x00);
     public static final Color DARK_RED = new Color(0xC0, 0x00, 0x00);
