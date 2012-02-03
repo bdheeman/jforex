@@ -27,7 +27,7 @@ import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
 
 public class t43_rc2 implements IStrategy {
-    private final String id = "t43_rc2";
+    private final String id = this.getClass().getName().substring(27, 31);
     private IAccount account;
     private IChart chart;
     private IConsole console;
@@ -159,7 +159,7 @@ public class t43_rc2 implements IStrategy {
     }
 
     protected String getLabel(Instrument instrument) throws JFException {
-        String label = instrument.name();
+        String label = instrument.name().toLowerCase();
         return id + label.substring(0, 2) + label.substring(3, 5) + sdf.format(roundTime(lastTick.getTime(), 60000));
     }
 
