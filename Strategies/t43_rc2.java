@@ -135,22 +135,22 @@ public class t43_rc2 implements IStrategy {
                                             indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
 
         // BUY
-        if(Double.isNaN(te[0][LOOK_BACK-2]) && te[0][LOOK_BACK-1] > 0) {
-            CloseOrders(IEngine.OrderCommand.SELL);
+        if(Double.isNaN(te[0][LOOK_BACK - 2]) && te[0][LOOK_BACK - 1] > 0) {
+            closeOrders(IEngine.OrderCommand.SELL);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
                                               askPrice - getPipPrice(stopLossPips), askPrice + getPipPrice(takeProfitPips));
             order.waitForUpdate(200);
         }
         // SELL
-        if(te[0][LOOK_BACK-2] > 0 && Double.isNaN(te[0][LOOK_BACK-1])) {
-            CloseOrders(IEngine.OrderCommand.BUY);
+        if(te[0][LOOK_BACK - 2] > 0 && Double.isNaN(te[0][LOOK_BACK - 1])) {
+            closeOrders(IEngine.OrderCommand.BUY);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
                                               bidPrice + getPipPrice(stopLossPips), bidPrice - getPipPrice(takeProfitPips));
             order.waitForUpdate(200);
         }
     }
 
-    private void CloseOrders(IEngine.OrderCommand oc) throws JFException {
+    private void closeOrders(IEngine.OrderCommand oc) throws JFException {
         for (IOrder order : engine.getOrders(instrument)) {
             if(order.getLabel().substring(0,id.length()).equals(id)) {
                 if(order.getOrderCommand() == oc) order.close();

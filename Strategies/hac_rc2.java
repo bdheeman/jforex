@@ -158,7 +158,7 @@ public class hac_rc2 implements IStrategy {
             //console.getOut().printf("pO: %.5f pH: %.5f pL: %.5f pC: %.5f\n", ha[PREV][OPEN], ha[PREV][HIGH], ha[PREV][LOW], ha[PREV][CLOSE]);
             //console.getOut().printf("hO: %.5f hH: %.5f hL: %.5f hC: %.5f\n", ha[CURR][OPEN], ha[CURR][HIGH], ha[CURR][LOW], ha[CURR][CLOSE]);
             //console.getOut().println("HA truned Blue " + bdf.format(prevBar.getTime()));
-            CloseOrders(OrderCommand.SELL);
+            closeOrders(OrderCommand.SELL);
             sellActive = false;
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
                                               askPrice - getPipPrice(stopLossPips), askPrice + getPipPrice(takeProfitPips));
@@ -170,7 +170,7 @@ public class hac_rc2 implements IStrategy {
             //console.getOut().printf("pO: %.5f pH: %.5f pL: %.5f pC: %.5f\n", ha[PREV][OPEN], ha[PREV][HIGH], ha[PREV][LOW], ha[PREV][CLOSE]);
             //console.getOut().printf("hO: %.5f hH: %.5f hL: %.5f hC: %.5f\n", ha[CURR][OPEN], ha[CURR][HIGH], ha[CURR][LOW], ha[CURR][CLOSE]);
             //console.getOut().println("HA truned Yellow " + bdf.format(prevBar.getTime()));
-            CloseOrders(OrderCommand.BUY);
+            closeOrders(OrderCommand.BUY);
             buyActive = false;
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
                                               bidPrice + getPipPrice(stopLossPips), bidPrice - getPipPrice(takeProfitPips));
@@ -179,7 +179,7 @@ public class hac_rc2 implements IStrategy {
         }
     }
 
-    private void CloseOrders(OrderCommand oc) throws JFException {
+    private void closeOrders(OrderCommand oc) throws JFException {
         for (IOrder order : engine.getOrders(instrument)) {
             if(order.getLabel().substring(0,id.length()).equals(id)) {
                 if(order.getOrderCommand() == oc) order.close();

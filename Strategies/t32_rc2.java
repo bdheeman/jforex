@@ -162,9 +162,9 @@ public class t32_rc2 implements IStrategy {
         double askPrice = askBar.getClose();
         double bidPrice = bidBar.getClose();
         IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 0);
-        double t3s[] = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodFast,
+        double[] t3s = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodFast,
                                      t3VolumeFactor, indicatorFilter, candlesBefore, prevBar.getTime(), candlesAfter);
-        double t3l[] = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodSlow,
+        double[] t3l = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodSlow,
                                      t3VolumeFactor, indicatorFilter, candlesBefore, prevBar.getTime(), candlesAfter);
         final int PREV = 1;
         final int CURR = 0;
@@ -175,7 +175,7 @@ public class t32_rc2 implements IStrategy {
             //console.getOut().printf("pM: %.5f pL: %.5f\n", t3s[PREV], t3l[PREV]);
             console.getOut().printf("cM: %.5f cL: %.5f Mv: %.5f\n", t3s[CURR], t3l[CURR], change);
             //console.getOut().println("t3s[CURR] ></ t3l[CURR] " + bdf.format(prevBar.getTime()));
-            CloseOrders(OrderCommand.SELL);
+            closeOrders(OrderCommand.SELL);
             sellActive = false;
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
                                               askPrice - getPipPrice(stopLossPips), askPrice + getPipPrice(takeProfitPips));
@@ -187,7 +187,7 @@ public class t32_rc2 implements IStrategy {
             //console.getOut().printf("pM: %.5f pL: %.5f\n", t3s[PREV], t3l[PREV]);
             console.getOut().printf("cM: %.5f cL: %.5f Mv: %.5f\n", t3s[CURR], t3l[CURR], change);
             //console.getOut().println("t3s[CURR] ><\ t3l[CURR] " + bdf.format(prevBar.getTime()));
-            CloseOrders(OrderCommand.BUY);
+            closeOrders(OrderCommand.BUY);
             buyActive = false;
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
                                               bidPrice + getPipPrice(stopLossPips), bidPrice - getPipPrice(takeProfitPips));
@@ -196,7 +196,7 @@ public class t32_rc2 implements IStrategy {
         }
     }
 
-    private void CloseOrders(OrderCommand oc) throws JFException {
+    private void closeOrders(OrderCommand oc) throws JFException {
         for (IOrder order : engine.getOrders(instrument)) {
             if(order.getLabel().substring(0,id.length()).equals(id)) {
                 if(order.getOrderCommand() == oc) order.close();
