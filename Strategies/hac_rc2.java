@@ -116,7 +116,7 @@ public class hac_rc2 implements IStrategy {
                 }
             }
         }
-        
+
         // Merge all orders, if more than 1
         try {
             IOrder prevOrder = null;
@@ -137,7 +137,7 @@ public class hac_rc2 implements IStrategy {
             for (IOrder order : engine.getOrders(instrument)) {
                 if(order.getLabel().substring(0,id.length()).equals(id))
                     order.close();
-            }            
+            }
         }
     }
 
