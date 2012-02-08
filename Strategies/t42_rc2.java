@@ -27,6 +27,8 @@ import java.text.SimpleDateFormat;
 
 import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
+import com.dukascopy.api.IIndicators.AppliedPrice;
+import com.dukascopy.api.IMessage.Type;
 
 public class t42_rc2 implements IStrategy {
     private final String id = this.getClass().getName().substring(27, 31);
@@ -45,10 +47,12 @@ public class t42_rc2 implements IStrategy {
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable(value="DC Period", stepSize=1)
     public int dcTimePeriod = 21;
-/*    public enum FPeriod {ONE_MIN, FIVE_MINS, TEN_MINS, FIFTEEN_MINS, THIRTY_MINS, ONE_HOUR, FOUR_HOURS, DAILY, WEEKLY, MONTHLY};
-    @Configurable(value="FP Period")
-    public FPeriod mFpTimePeriod = FPeriod.ONE_HOUR;
-    private int fpTimePeriod = mFpTimePeriod.ordinal(); */
+    @Configurable("T3 Period (Fast)")
+    public int t3TimePeriodFast = 34;
+    @Configurable("T3 Period (Slow)")
+    public int t3TimePeriodSlow = 233;
+    @Configurable(value="T3 Volume Factor", stepSize=0.05)
+    public double t3VolumeFactor = 0.7;
     //@Configurable("Candles Before")
     public int numberOfCandlesBefore = 2;
     //@Configurable("Candles After")
@@ -56,16 +60,20 @@ public class t42_rc2 implements IStrategy {
 
     @Configurable(value="Risk Factor (Percent)", stepSize=0.01)
     public double riskPercent = 0.21;
+    @Configurable(value="Use Leverage (Percent)", stepSize=0.1)
+    public double maximumUoL = 40.0;
     @Configurable(value="Slippage (Pippets)", stepSize=0.1)
     public double slippage = 2.1;
     @Configurable(value="Stop Loss (factor)", stepSize=0.1)
-    public double mStopLossPips = 2.4;
+    public double mStopLossPips = 2.1;
     private double stopLossPips = mStopLossPips;
     @Configurable(value="Take Profit (factor)", stepSize=0.1)
-    public double mTakeProfitPips = 4.2;
+    public double mTakeProfitPips = 5.5;
     private double takeProfitPips = mTakeProfitPips;
     @Configurable("Use StopLoss? (No)")
     public boolean useStopLoss = false;
+    @Configurable("Close HugeLoss? (No)")
+    public boolean closeHugeLoss = false;
     @Configurable("Close all on Stop? (Yes)")
     public boolean closeAllOnStop = true;
     @Configurable("Debug/Verbose? (No)")
@@ -95,8 +103,21 @@ public class t42_rc2 implements IStrategy {
     @Override
     public void onMessage(IMessage message) throws JFException {
         // Print messages, but related to orders
-        if (message.getOrder() != null) {
-            console.getOut().println(message.getOrder().getLabel() + " " + message.getType() + " " + message.getContent());
+        if (message.getOrder() != null && message.getOrder().getLabel().substring(0,id.length()).equals(id)) {
+            switch (message.getType()) {
+                // skipp the following
+                case ORDER_SUBMIT_OK:
+                case ORDER_CLOSE_OK:
+                case ORDER_FILL_OK:
+                case ORDERS_MERGE_OK:
+                case ORDER_CHANGED_OK:
+                    break;
+                case NOTIFICATION:
+                    console.getOut().println(message.getOrder().getLabel() +" "+ message.getContent().replaceAll(".*-Order", "Order"));
+                    break;
+                default:
+                    console.getOut().println(message.getOrder().getLabel() +" "+ message.getType() +" "+ message.getContent());
+            }
         }
     }
 
@@ -105,7 +126,7 @@ public class t42_rc2 implements IStrategy {
         if (!closeAllOnStop)
             return;
 
-        // Remove SL and TP; prepare for merge
+        // Prepare for merge; remove SL and TP if any
         List<IOrder> existingOrders = new ArrayList<IOrder>();
         for (IOrder order : engine.getOrders(instrument)) {
             if(order.getLabel().substring(0,id.length()).equals(id)) {
@@ -123,7 +144,7 @@ public class t42_rc2 implements IStrategy {
             }
         }
 
-        // Merge all orders, if more than 1
+        // Try merging all orders, if more than 1
         try {
             IOrder prevOrder = null;
             int counter = 0;
@@ -147,6 +168,7 @@ public class t42_rc2 implements IStrategy {
         }
     }
 
+    @Override
     public void onTick(Instrument instrument, ITick tick) throws JFException {
         if (!instrument.equals(this.instrument))
             return;
@@ -165,8 +187,8 @@ public class t42_rc2 implements IStrategy {
             return;
 
         IBar histBar = history.getBar(instrument, period, OfferSide.BID, 1);
-        double[][] ha = indicators.heikenAshi(instrument, period, OfferSide.BID, indicatorFilter,
-            numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+        double[][] ha = indicators.heikenAshi(instrument, period, OfferSide.BID,
+            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
 
         final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
         final int OPEN = 0; final int HIGH = 3; final int LOW = 2; final int CLOSE = 1;
@@ -174,33 +196,62 @@ public class t42_rc2 implements IStrategy {
         double average = ((ha[PREV][HIGH] - ha[PREV][LOW]) + (ha[PREV-1][HIGH] - ha[PREV-1][LOW])) / 2.0 * 10000;
         double spread = askPrice - bidPrice;
 
-        stopLossPips = mStopLossPips * average;
+        stopLossPips = roundPips(mStopLossPips * average);
         if (stopLossPips < mStopLossPips)
             return;
-        stopLossPips = stopLossPips - stopLossPips % 0.5 + 0.5;
 
         double volume = getLotSize(account);
-        takeProfitPips = mTakeProfitPips * average;
+        takeProfitPips = roundPips(mTakeProfitPips * average);
         if (takeProfitPips < mTakeProfitPips)
             return;
-        takeProfitPips = takeProfitPips - takeProfitPips % 0.5 + 0.5;
 
         if (!useStopLoss)
             stopLossPips = 0;
-/*
-        double[][] fp = indicators.fibPivot(instrument, period, OfferSide.BID, fpTimePeriod, indicatorFilter,
-            numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
 
-        final int PP = 0; final int R1 = 1; final int S1 = 2; final int R2 = 3; final int S2 = 4; final int R3 = 5; final int S3 = 6;
-*/
-        double[][] dc = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod, indicatorFilter,
-            numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+        // Major indicators
+        double[][] dc = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
+            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
 
         final int UPPER = 0; final int LOWER = 1;
 
-        // UoL management
+        double[] t3f = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodFast, t3VolumeFactor,
+            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+        double[] t3s = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodSlow, t3VolumeFactor,
+            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+
+        // Take care, your profits should not turn into losses
+        if (askPrice < t3f[PREV]) {
+            for (IOrder order : engine.getOrders()) {
+                if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
+                    if (order.isLong() && order.getProfitLossInPips() > mStopLossPips) order.close();
+                }
+            }
+        } else if  (bidPrice > t3f[PREV]) {
+            for (IOrder order : engine.getOrders()) {
+                if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
+                    if (!order.isLong() && order.getProfitLossInPips() > mStopLossPips) order.close();
+                }
+            }
+        }
+
+        // Risk management; book growing/huge losses
+        if (closeHugeLoss && askPrice > t3s[PREV]) {
+            for (IOrder order : engine.getOrders()) {
+                if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
+                    if (order.isLong() && order.getProfitLossInPips() < 0) order.close();
+                }
+            }
+        } else if  (closeHugeLoss && bidPrice < t3s[PREV]) {
+            for (IOrder order : engine.getOrders()) {
+            if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
+                if (!order.isLong() && order.getProfitLossInPips() < 0) order.close();
+                }
+            }
+        }
+
+        // Use of Leverage management
         double amt = 0;
-        boolean uol = account.getUseOfLeverage() > 40.0;
+        boolean uol = account.getUseOfLeverage() > maximumUoL;
         if (uol) {
             for (IOrder order : engine.getOrders(instrument)) {
                 if (order.getState() == IOrder.State.FILLED) {
@@ -214,26 +265,26 @@ public class t42_rc2 implements IStrategy {
         boolean longOk = (uol && amt > 0) ? false : true;
         boolean shortOk = (uol && amt < 0) ? false : true;
 
-        // Print debug/test messages
+        // Print debug/info messages
         if (verbose) {
             SimpleDateFormat bdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             bdf.setTimeZone(TimeZone.getTimeZone("GMT"));
             console.getOut().printf("%s\n", bdf.format(roundTime(histBar.getTime(), 60000)));
             console.getOut().printf("  HA %s\n", Arrays.deepToString(ha));
             console.getOut().printf("  DC %s\n", Arrays.deepToString(dc));
-/*            console.getOut().printf("  FP %s\n", Arrays.deepToString(fp)); */
+            console.getOut().printf("  3F %s\n", Arrays.toString(t3f));
+            console.getOut().printf("  3S %s\n", Arrays.toString(t3s));
             console.getOut().printf("  BID %.5f ASK %.5f SL %.2f TP %.2f\n", bidPrice, askPrice, stopLossPips, takeProfitPips);
             console.getOut().printf("  AVG %f SPD %.5f VOL %f\n", average, spread, volume);
             if (uol) console.getOut().printf("  AMT %f UoL %.2f\n", amt, account.getUseOfLeverage());
         }
 
-        // FIX: use T3 or FP
         // BUY on lower lows
         if (longOk && bidPrice + spread < dc[LOWER][PREV] && dc[LOWER][PREV] < dc[LOWER][PREV-1]) {
             double stopLossPrice = stopLossPips > 0 ? stopLossPrice = askPrice - getPipPrice(stopLossPips) : 0;
             double takeProfitPrice = askPrice + getPipPrice(takeProfitPips);
 
-            console.getOut().printf("%s OERDER_BUY @ %.5f VOL %.4f SL: %.5f TP: %.5f\n", getLabel(instrument), askPrice, volume, stopLossPrice, takeProfitPrice);
+            console.getOut().printf("%s BUY #%s @%.5f VOL %.4f SL %.5f TP %.5f\n", getLabel(instrument), instrument.name(), askPrice, volume, stopLossPrice, takeProfitPrice);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
                                               stopLossPrice, takeProfitPrice);
         }
@@ -242,7 +293,7 @@ public class t42_rc2 implements IStrategy {
             double stopLossPrice = stopLossPips > 0 ? stopLossPrice = bidPrice + getPipPrice(stopLossPips) : 0;
             double takeProfitPrice = bidPrice - getPipPrice(takeProfitPips);
 
-            console.getOut().printf("%s ORDER_SELL @ %.5f VOL %.4f SL: %.5f TP: %.5f\n", getLabel(instrument), bidPrice, volume, stopLossPrice, takeProfitPrice);
+            console.getOut().printf("%s SELL #%s @%.5f VOL %.4f SL %.5f TP %.5f\n", getLabel(instrument), instrument.name(), bidPrice, volume, stopLossPrice, takeProfitPrice);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
                                               stopLossPrice, takeProfitPrice);
         }
@@ -265,6 +316,10 @@ public class t42_rc2 implements IStrategy {
     protected double getPipPrice(double pips) throws JFException {
         double pipPrice = pips * instrument.getPipValue();
         return pipPrice - pipPrice % 0.000001;
+    }
+
+    protected double roundPips(double pips) throws JFException {
+        return pips - pips % 0.5 + 0.5;
     }
 
     protected long roundTime(long time, long milliseconds) throws JFException {
