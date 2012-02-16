@@ -186,9 +186,9 @@ public class t42_rc2 implements IStrategy {
         if (askBar.getVolume() == 0 || bidBar.getVolume() == 0)
             return;
 
-        IBar histBar = history.getBar(instrument, period, OfferSide.BID, 1);
+        IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
         double[][] ha = indicators.heikenAshi(instrument, period, OfferSide.BID,
-            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
         final int OPEN = 0; final int HIGH = 3; final int LOW = 2; final int CLOSE = 1;
@@ -210,14 +210,14 @@ public class t42_rc2 implements IStrategy {
 
         // Major indicators
         double[][] dc = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
-            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         final int UPPER = 0; final int LOWER = 1;
 
         double[] t3f = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodFast, t3VolumeFactor,
-            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
         double[] t3s = indicators.t3(instrument, period, OfferSide.BID, AppliedPrice.CLOSE, t3TimePeriodSlow, t3VolumeFactor,
-            indicatorFilter, numberOfCandlesBefore, histBar.getTime(), numberOfCandlesAfter);
+            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         // Take care, your profits should not turn into losses
         if (askPrice < t3f[PREV]) {
@@ -269,7 +269,7 @@ public class t42_rc2 implements IStrategy {
         if (verbose) {
             SimpleDateFormat bdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             bdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-            console.getOut().printf("%s\n", bdf.format(roundTime(histBar.getTime(), 60000)));
+            console.getOut().printf("%s\n", bdf.format(roundTime(prevBar.getTime(), 60000)));
             console.getOut().printf("  HA %s\n", Arrays.deepToString(ha));
             console.getOut().printf("  DC %s\n", Arrays.deepToString(dc));
             console.getOut().printf("  3F %s\n", Arrays.toString(t3f));
@@ -299,6 +299,7 @@ public class t42_rc2 implements IStrategy {
         }
     }
 
+    // Order processing functions
     protected String getLabel(Instrument instrument) throws JFException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));

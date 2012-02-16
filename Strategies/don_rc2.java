@@ -88,15 +88,18 @@ public class don_rc2 implements IStrategy {
         for (IOrder order : engine.getOrders(instrument)) {
             if(order.getLabel().substring(0,id.length()).equals(id)) {
                 if (this.order != null) {
-                    console.getWarn().println(this.order.getLabel() +" Order will be ignored, manage it manually");
+                    //console.getWarn().println(this.order.getLabel() +" Order will be ignored, manage it manually");
+                    console.getOut().println(this.order.getLabel() +" <WARN> Order will be ignored, manage it manually");
                 }
                 this.order = order;
                 counter = Integer.valueOf(order.getLabel().substring(5, 14));
-                console.getNotif().println(order.getLabel() +" Order found, shall try handling it");
+                //console.getNotif().println(order.getLabel() +" Order found, shall try handling it");
+                console.getOut().println(order.getLabel() +" <NOTICE> Order found, shall try handling it");
             }
         }
         if (isActive(order))
-            console.getInfo().println(order.getLabel() +" ORDER_FOUND_OK");
+            //console.getInfo().println(order.getLabel() +" ORDER_FOUND_OK");
+            console.getOut().println(order.getLabel() +" <INFO> ORDER_FOUND_OK");
     }
 
     public void onAccount(IAccount account) throws JFException {
@@ -119,20 +122,24 @@ public class don_rc2 implements IStrategy {
                 case ORDER_SUBMIT_OK:
                 case ORDER_CLOSE_OK:
                 case ORDERS_MERGE_OK:
-                    console.getInfo().println(orderLabel +" "+ messageType);
+                    //console.getInfo().println(orderLabel +" "+ messageType);
+                    console.getOut().println(orderLabel +" <INFO> "+ messageType);
                     break;
                 case NOTIFICATION:
-                    console.getNotif().println(orderLabel +" "+ message.getContent().replaceAll(".*-Order", "Order"));
+                    //console.getNotif().println(orderLabel +" "+ message.getContent().replaceAll(".*-Order", "Order"));
+                    console.getOut().println(orderLabel +" <NOTICE> "+ message.getContent().replaceAll(".*-Order", "Order"));
                     break;
                 case ORDER_CHANGED_REJECTED:
                 case ORDER_CLOSE_REJECTED:
                 case ORDER_FILL_REJECTED:
                 case ORDER_SUBMIT_REJECTED:
                 case ORDERS_MERGE_REJECTED:
-                    console.getWarn().println(orderLabel +" "+ message.getContent());
+                    //console.getWarn().println(orderLabel +" "+ message.getContent());
+                    console.getOut().println(orderLabel +" <WARN> "+ message.getContent());
                     break;
                 default:
-                    console.getErr().println(orderLabel +" "+ messageType +" "+ message.getContent());
+                    //console.getErr().println(orderLabel +" "+ messageType +" "+ message.getContent());
+                    console.getOut().println(orderLabel +" <????> "+ messageType +" "+ message.getContent());
                     break;
             }
         }
@@ -212,11 +219,13 @@ public class don_rc2 implements IStrategy {
     private void closeOrder(IOrder order) throws JFException {
         if (isActive(order)) {
             order.close();
-            order.waitForUpdate(200, IOrder.State.CLOSED);
+            //order.waitForUpdate(200, IOrder.State.CLOSED);
+            order.waitForUpdate(200);
             if (order.getState() == IOrder.State.CLOSED) {
                 this.order = null;
             } else {
-                console.getWarn().println(order.getLabel() +" Closed failed!");
+                //console.getWarn().println(order.getLabel() +" Closed failed!");
+                console.getOut().println(order.getLabel() +" <WARN> Closed failed!");
             }
         }
     }
@@ -225,11 +234,11 @@ public class don_rc2 implements IStrategy {
         return (order != null && order.getState() == IOrder.State.FILLED) ? true : false;
     }
 
-    private double getPipPrice(double pips) {
-        return pips * this.instrument.getPipValue();
-    }
-
     private String getLabel(Instrument instrument) {
         return id + String.format("%10d", ++counter).replace(" ", "0");
+    }
+
+    private double getPipPrice(double pips) {
+        return pips * this.instrument.getPipValue();
     }
 }

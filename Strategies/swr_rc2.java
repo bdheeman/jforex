@@ -95,13 +95,7 @@ public class swr_rc2 implements IStrategy {
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
     }
 
-    protected String getLabel(Instrument instrument) {
-        String label = instrument.name();
-        label = label + (counter++);
-        label = label.toUpperCase();
-        return label;
-    }
-
+    // Order processing functions
     private boolean askInsideRect(ITick tick) {
         return tick.getAsk() >= rectangle.getPrice(0) && tick.getAsk() <= rectangle.getPrice(1);
     }
@@ -118,11 +112,17 @@ public class swr_rc2 implements IStrategy {
         return str + UUID.randomUUID().toString().replace('-', '0');
     }
 
+    protected String getLabel(Instrument instrument) {
+        String label = instrument.name();
+        label = label + (counter++);
+        label = label.toUpperCase();
+        return label;
+    }
+
     private void print(Object o) {
         console.getOut().println(o);
     }
 
-    // round price to the pip scale
     private double roundToTenthPip(double price) {
         BigDecimal bd = new BigDecimal(price);
         bd = bd.setScale(instrument.getPipScale() + 1, BigDecimal.ROUND_HALF_UP);
