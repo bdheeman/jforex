@@ -17,29 +17,30 @@
 //
 package jforex.strategies.bdheeman;
 
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 
 import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
+import com.dukascopy.api.IIndicators.AppliedPrice;
+import com.dukascopy.api.IIndicators.MaType;
+import com.dukascopy.api.indicators.IIndicator;
 
 public class t43_rc2 implements IStrategy {
-    private final String id = this.getClass().getName().substring(27, 31);
-    private IAccount account;
-    private IChart chart;
+    private final String id = this.getClass().getName().substring(27, 31).toUpperCase();
     private IConsole console;
-    private IContext context;
     private IEngine engine;
     private IHistory history;
     private IIndicators indicators;
+    private IContext context;
 
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
-    @Configurable("Time Period")
-    public Period period = Period.FIVE_MINS;
+    @Configurable("Period")
+    public Period period = Period.TEN_MINS;
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
@@ -48,126 +49,188 @@ public class t43_rc2 implements IStrategy {
     @Configurable(value="TE Deviation", stepSize=0.01)
     public double teDeviation = 0.1;
 
-    @Configurable(value="Risk Factor (Percent)", stepSize=0.1)
+    @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
-    @Configurable(value="Slippage (Pips)", stepSize=0.5)
-    public double slippage = 2;
-    @Configurable(value="Stop Loss (Pips)", stepSize=0.5)
-    public double stopLossPips = 19.5;
-    @Configurable(value="Take Profit (Pips)", stepSize=0.5)
-    public double takeProfitPips = 59.5;
-    @Configurable("Close all on Stop (Yes)")
-    public boolean closeAllOnStop = true;
+    @Configurable(value="Slippage (pips)", stepSize=0.1)
+    public double slippage = 0.5;
+    @Configurable(value="Stop Loss (pips)", stepSize=0.5)
+    public double stopLossPips = 0;
+    @Configurable(value="Take Profit (pips)", stepSize=0.5)
+    public double takeProfitPips = 0;
+    @Configurable(value="Close all on Stop? (No)")
+    public boolean closeAllOnStop = false;
+    @Configurable(value="Verbose/Debug? (No)")
+    public boolean verbose = false;
 
-    private ITick lastTick;
-    //private SimpleDateFormat bdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
-    private double volume = 0.002;
+    private final static int HIGH = 0;
+    private final static int LOW = 1;
+    private IOrder order = null;
+    private int counter = 0;
+    private double volume = 0.001;
 
     @Override
     public void onStart(IContext context) throws JFException {
-        account = context.getAccount();
-        chart = context.getChart(instrument);
         console = context.getConsole();
         engine = context.getEngine();
         history = context.getHistory();
         indicators = context.getIndicators();
+        this.context = context;
 
-        onAccount(account);
+        // Do subscribe selected instrument
         Set subscribedInstruments = new HashSet();
         subscribedInstruments.add(instrument);
         context.setSubscribedInstruments(subscribedInstruments);
-        if (chart != null) {
+
+        // Add indicators for visual testing
+        IChart chart = context.getChart(instrument);
+        if (chart != null && engine.getType() == IEngine.Type.TEST) {
             chart.addIndicator(indicators.getIndicator("TRENDENVELOPES"), new Object[]{teTimePeriod, teDeviation});
         }
-        //bdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+        // Recall existing; last position, if any
+        for (IOrder order : engine.getOrders(instrument)) {
+            if(order.getLabel().substring(0,id.length()).equals(id)) {
+                if (this.order != null) {
+                    console.getWarn().println(this.order.getLabel() +" Order will be ignored, manage it manually");
+                }
+                this.order = order;
+                counter = Integer.valueOf(order.getLabel().substring(5, 14));
+                console.getNotif().println(order.getLabel() +" Order found, shall try handling it");
+            }
+        }
+        if (isActive(order))
+            console.getInfo().println(order.getLabel() +" ORDER_FOUND_OK");
     }
 
-    @Override
     public void onAccount(IAccount account) throws JFException {
-        double accountEquity = account.getEquity();
-        double leverage = account.getLeverage();
-        DecimalFormat df = new DecimalFormat(accountEquity < 2500 ? "#.###" : "##.##");
-        volume = Double.valueOf(df.format(accountEquity * (riskPercent / 100) / (stopLossPips * leverage)));
+        // Risk management, huh
+        volume = account.getEquity() / (100 * account.getLeverage()) * (riskPercent / 100);
+        volume = volume - volume % 0.001;
+        if (volume < 0.001) volume = 0.001;
     }
 
-    @Override
     public void onMessage(IMessage message) throws JFException {
-        //if the message is related to order print its content
-        if (message.getOrder() != null) {
-            console.getOut().println(message.getOrder().getLabel() + " " + message.getType() + " " + message.getContent());
+        // Print messages, but related to own orders
+        if (message.getOrder() != null && message.getOrder().getLabel().substring(0,id.length()).equals(id)) {
+            String orderLabel = message.getOrder().getLabel();
+            IMessage.Type messageType = message.getType();
+            switch (messageType) {
+                // Ignore the following
+                case ORDER_FILL_OK:
+                case ORDER_CHANGED_OK:
+                    break;
+                case ORDER_SUBMIT_OK:
+                case ORDER_CLOSE_OK:
+                case ORDERS_MERGE_OK:
+                    console.getInfo().println(orderLabel +" "+ messageType);
+                    break;
+                case NOTIFICATION:
+                    console.getNotif().println(orderLabel +" "+ message.getContent().replaceAll(".*-Order", "Order"));
+                    break;
+                case ORDER_CHANGED_REJECTED:
+                case ORDER_CLOSE_REJECTED:
+                case ORDER_FILL_REJECTED:
+                case ORDER_SUBMIT_REJECTED:
+                case ORDERS_MERGE_REJECTED:
+                    console.getWarn().println(orderLabel +" "+ message.getContent());
+                    break;
+                default:
+                    console.getErr().println(orderLabel +" "+ messageType +" "+ message.getContent());
+                    break;
+            }
         }
     }
 
-    @Override
     public void onStop() throws JFException {
         if (!closeAllOnStop)
             return;
 
-        // close all orders
+        // Close all orders
         for (IOrder order : engine.getOrders(instrument)) {
-            if(order.getLabel().substring(0,id.length()).equals(id)) {
+            if(order.getLabel().substring(0,id.length()).equals(id))
                 order.close();
-            }
         }
     }
 
+    @Override
     public void onTick(Instrument instrument, ITick tick) throws JFException {
-        if (!instrument.equals(this.instrument))
-            return;
-
-        lastTick = tick;
     }
 
     @Override
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-        if (!instrument.equals(this.instrument) || !period.equals(this.period))
+        if (instrument != this.instrument || period != this.period)
             return;
 
-        if (askBar.getVolume() == 0 || bidBar.getVolume() == 0 || volume == 0)
-            return;
-
-        double askPrice = askBar.getClose();
-        double bidPrice = bidBar.getClose();
-        final int LOOK_BACK = 4000;
+        final int LOOK_BACK = 400;
         double[][] te = indicators.trendEnv(instrument, period, OfferSide.BID, teTimePeriod, teDeviation,
                                             indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
 
-        // BUY
+        // Buy/Long
         if(Double.isNaN(te[0][LOOK_BACK - 2]) && te[0][LOOK_BACK - 1] > 0) {
-            closeOrders(IEngine.OrderCommand.SELL);
-            IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
-                                              askPrice - getPipPrice(stopLossPips), askPrice + getPipPrice(takeProfitPips));
-            order.waitForUpdate(200);
+            if (order == null || !order.isLong()) {
+                closeOrder(order);
+                order = submitOrder(OrderCommand.BUY);
+            }
         }
-        // SELL
+        // Sell/Short
         if(te[0][LOOK_BACK - 2] > 0 && Double.isNaN(te[0][LOOK_BACK - 1])) {
-            closeOrders(IEngine.OrderCommand.BUY);
-            IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
-                                              bidPrice + getPipPrice(stopLossPips), bidPrice - getPipPrice(takeProfitPips));
-            order.waitForUpdate(200);
-        }
-    }
-
-    private void closeOrders(IEngine.OrderCommand oc) throws JFException {
-        for (IOrder order : engine.getOrders(instrument)) {
-            if(order.getLabel().substring(0,id.length()).equals(id)) {
-                if(order.getOrderCommand() == oc) order.close();
+            if (order == null || order.isLong()) {
+                closeOrder(order);
+                order = submitOrder(OrderCommand.SELL);
             }
         }
     }
 
-    protected String getLabel(Instrument instrument) throws JFException {
-        String label = instrument.name().toLowerCase();
-        return id + label.substring(0, 2) + label.substring(3, 5) + sdf.format(roundTime(lastTick.getTime(), 60000));
+    // Order processing functions
+    private IOrder submitOrder(OrderCommand orderCommand) throws JFException {
+        double stopLossPrice = 0.0, takeProfitPrice = 0.0;
+        double bidPrice = history.getLastTick(instrument).getBid();
+        double askPrice = history.getLastTick(instrument).getAsk();
+        String label = getLabel(instrument);
+        String name = instrument.getPrimaryCurrency() + instrument.getPairsSeparator() + instrument.getSecondaryCurrency();
+
+        if (orderCommand == OrderCommand.BUY) {
+            if (stopLossPips > 0) {
+                stopLossPrice = bidPrice - getPipPrice(stopLossPips);
+            }
+            if (takeProfitPips > 0) {
+                takeProfitPrice = bidPrice + getPipPrice(takeProfitPips);
+            }
+            console.getOut().printf("%s BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
+        } else {
+            if (stopLossPips > 0) {
+                stopLossPrice = askPrice + getPipPrice(stopLossPips);
+            }
+            if (takeProfitPips > 0) {
+                takeProfitPrice = askPrice - getPipPrice(takeProfitPips);
+            }
+            console.getOut().printf("%s SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
+        }
+
+        return engine.submitOrder(label, instrument, orderCommand, volume, 0, slippage, stopLossPrice, takeProfitPrice);
     }
 
-    protected double getPipPrice(double pips) throws JFException {
-        return pips * instrument.getPipValue();
+    private void closeOrder(IOrder order) throws JFException {
+        if (isActive(order)) {
+            order.close();
+            order.waitForUpdate(200, IOrder.State.CLOSED);
+            if (order.getState() == IOrder.State.CLOSED) {
+                this.order = null;
+            } else {
+                console.getWarn().println(order.getLabel() +" Closed failed!");
+            }
+        }
     }
 
-    protected long roundTime(long time, long milliseconds) throws JFException {
-        return time - time % milliseconds + milliseconds;
+    private boolean isActive(IOrder order) throws JFException {
+        return (order != null && order.getState() == IOrder.State.FILLED) ? true : false;
+    }
+
+    private double getPipPrice(double pips) {
+        return pips * this.instrument.getPipValue();
+    }
+
+    private String getLabel(Instrument instrument) {
+        return id + String.format("%10d", ++counter).replace(" ", "0");
     }
 }

@@ -1,216 +1,246 @@
+//
+// Copyright (c) 2012, Balwinder S "bdheeman" Dheeman <bdheeman/AT/gmail.com>
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the Free
+// Software Foundation; either version 2 of the License, or (at your option)
+// any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY  or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+// more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc., 675
+// Mass Ave, Cambridge, MA 02139, USA.
+//
 package jforex.strategies.bdheeman;
 
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 
 import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.IIndicators.AppliedPrice;
 import com.dukascopy.api.IIndicators.MaType;
+import com.dukascopy.api.indicators.IIndicator;
 
 public class dma_rc2 implements IStrategy {
-    private final String id = this.getClass().getName().substring(27, 31);
-    private IAccount account;
-    private IChart chart;
+    private final String id = this.getClass().getName().substring(27, 31).toUpperCase();
     private IConsole console;
     private IEngine engine;
     private IHistory history;
     private IIndicators indicators;
+    private IContext context;
 
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
-    @Configurable("Time Period")
+    @Configurable("Period")
     public Period period = Period.TEN_MINS;
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
-    @Configurable("Fast MA Applied Price")
-    public AppliedPrice appliedPriceFast = AppliedPrice.CLOSE;
-    @Configurable("Slow MA Applied Price")
-    public AppliedPrice appliedPriceSlow = AppliedPrice.CLOSE;
     @Configurable("Fast MA Time Period")
-    public int timePeriodFast = 5;
+    public int timePeriodFast = 13;
     @Configurable("Fast MA Type")
-    public MaType maTypeFast = MaType.SMA;
+    public MaType maTypeFast = MaType.T3;
+    //@Configurable("Fast MA Applied Price")
+    public AppliedPrice appliedPriceFast = AppliedPrice.CLOSE;
     @Configurable("Slow MA Time Period")
-    public int timePeriodSlow = 34;
+    public int timePeriodSlow = 55;
     @Configurable("Slow MA Type")
-    public MaType maTypeSlow = MaType.SMA;
-    //@Configurable("Candles Before")
-    public int candlesBefore = 2;
-    //@Configurable("Candles After")
-    public int candlesAfter = 0;
+    public MaType maTypeSlow = MaType.T3;
+    //@Configurable("Slow MA Applied Price")
+    public AppliedPrice appliedPriceSlow = AppliedPrice.CLOSE;
 
-    @Configurable(value="Risk Factor (Percent)", stepSize=0.1)
+    @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
-    @Configurable(value="Slippage (Pips)", stepSize=0.5)
-    public double slippage = 2;
-    @Configurable(value="Stop Loss (Pips)", stepSize=0.5)
-    public double stopLossPips = 40;
-    @Configurable(value="Take Profit (Pips)", stepSize=0.5)
-    public double takeProfitPips = 200;
-    //@Configurable(value="Break-Even (Percent)", stepSize=0.1)
-    public double breakEeven = stopLossPips / takeProfitPips * 100;
-    //@Configurable(value="Trailing Stop (Pips)", stepSize=0.5)
-    public int trailingStopPips = 10;
-    //@Configurable("Trailing Stop (Off)")
-    public boolean enabledTrailingStop = false;
-    @Configurable("Close all on Stop (Yes)")
-    public boolean closeAllOnStop = true;
+    @Configurable(value="Slippage (pips)", stepSize=0.1)
+    public double slippage = 0.5;
+    @Configurable(value="Stop Loss (pips)", stepSize=0.5)
+    public double stopLossPips = 0;
+    @Configurable(value="Take Profit (pips)", stepSize=0.5)
+    public double takeProfitPips = 0;
+    @Configurable(value="Close all on Stop? (No)")
+    public boolean closeAllOnStop = false;
+    @Configurable(value="Verbose/Debug? (No)")
+    public boolean verbose = false;
 
-    private ITick lastTick;
-    //private SimpleDateFormat bdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
-    private double volume = 0.002;
-
-    private boolean buyActive = false;
-    private boolean sellActive = false;
-    private double prevEquity;
+    private final static int HIGH = 0;
+    private final static int LOW = 1;
+    private IOrder order = null;
+    private int counter = 0;
+    private double volume = 0.001;
 
     @Override
     public void onStart(IContext context) throws JFException {
-        account = context.getAccount();
-        chart = context.getChart(instrument);
         console = context.getConsole();
         engine = context.getEngine();
         history = context.getHistory();
         indicators = context.getIndicators();
+        this.context = context;
 
-        prevEquity = account.getEquity();
-        onAccount(account);
+        // Do subscribe selected instrument
         Set subscribedInstruments = new HashSet();
         subscribedInstruments.add(instrument);
         context.setSubscribedInstruments(subscribedInstruments);
-        if (chart != null) {
-            chart.addIndicator(indicators.getIndicator("DMA"), new Object[]{timePeriodFast, maTypeFast, timePeriodSlow, maTypeSlow});
+
+        // Add indicators for visual testing
+        IChart chart = context.getChart(instrument);
+        if (chart != null && engine.getType() == IEngine.Type.TEST) {
+            chart.addIndicator(indicators.getIndicator("DMA"), new Object[]{timePeriodFast, maTypeFast.ordinal(), timePeriodSlow, maTypeSlow.ordinal()});
         }
-        //bdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+        // Recall existing; last position, if any
+        for (IOrder order : engine.getOrders(instrument)) {
+            if(order.getLabel().substring(0,id.length()).equals(id)) {
+                if (this.order != null) {
+                    console.getWarn().println(this.order.getLabel() +" Order will be ignored, manage it manually");
+                }
+                this.order = order;
+                counter = Integer.valueOf(order.getLabel().substring(5, 14));
+                console.getNotif().println(order.getLabel() +" Order found, shall try handling it");
+            }
+        }
+        if (isActive(order))
+            console.getInfo().println(order.getLabel() +" ORDER_FOUND_OK");
     }
 
-    @Override
     public void onAccount(IAccount account) throws JFException {
-        double accountEquity = account.getEquity();
-        if (accountEquity > prevEquity) {
-            if ((accountEquity - prevEquity) / prevEquity > 0.2) {
-                riskPercent /= 2.0;
-                if (riskPercent < 0.2) riskPercent = 0.2;
-            };
-        }
-        double leverage = account.getLeverage();
-        DecimalFormat df = new DecimalFormat(accountEquity < 2500 ? "#.###" : "##.##");
-        volume = Double.valueOf(df.format(accountEquity * (riskPercent / 100) / (stopLossPips * leverage)));
+        // Risk management, huh
+        volume = account.getEquity() / (100 * account.getLeverage()) * (riskPercent / 100);
+        volume = volume - volume % 0.001;
         if (volume < 0.001) volume = 0.001;
     }
 
-    @Override
     public void onMessage(IMessage message) throws JFException {
-        //if the message is related to order print its content
-        if (message.getOrder() != null) {
-            console.getOut().println(message.getOrder().getLabel() + " " + message.getType() + " " + message.getContent());
+        // Print messages, but related to own orders
+        if (message.getOrder() != null && message.getOrder().getLabel().substring(0,id.length()).equals(id)) {
+            String orderLabel = message.getOrder().getLabel();
+            IMessage.Type messageType = message.getType();
+            switch (messageType) {
+                // Ignore the following
+                case ORDER_FILL_OK:
+                case ORDER_CHANGED_OK:
+                    break;
+                case ORDER_SUBMIT_OK:
+                case ORDER_CLOSE_OK:
+                case ORDERS_MERGE_OK:
+                    console.getInfo().println(orderLabel +" "+ messageType);
+                    break;
+                case NOTIFICATION:
+                    console.getNotif().println(orderLabel +" "+ message.getContent().replaceAll(".*-Order", "Order"));
+                    break;
+                case ORDER_CHANGED_REJECTED:
+                case ORDER_CLOSE_REJECTED:
+                case ORDER_FILL_REJECTED:
+                case ORDER_SUBMIT_REJECTED:
+                case ORDERS_MERGE_REJECTED:
+                    console.getWarn().println(orderLabel +" "+ message.getContent());
+                    break;
+                default:
+                    console.getErr().println(orderLabel +" "+ messageType +" "+ message.getContent());
+                    break;
+            }
         }
     }
 
-    @Override
     public void onStop() throws JFException {
         if (!closeAllOnStop)
             return;
 
-        // close all orders
+        // Close all orders
         for (IOrder order : engine.getOrders(instrument)) {
-            if(order.getLabel().substring(0,id.length()).equals(id)) {
+            if(order.getLabel().substring(0,id.length()).equals(id))
                 order.close();
-            }
         }
     }
 
     @Override
     public void onTick(Instrument instrument, ITick tick) throws JFException {
-        if (!instrument.equals(this.instrument))
-            return;
-
-        lastTick = tick;
-
-        if (!enabledTrailingStop)
-            return;
-        // Move stop-loss, if possible
-        for (IOrder order : engine.getOrders()) {
-            if (order.getState() == IOrder.State.FILLED && order.getLabel().substring(0,id.length()).equals(id)) {
-                double pips = order.getProfitLossInPips();
-
-                if (pips > (takeProfitPips * breakEeven / 100) + trailingStopPips) {
-                    double stopLossPips = order.isLong() ? pips - trailingStopPips : pips + trailingStopPips;
-                    order.setStopLossPrice(getPipPrice((int) stopLossPips));
-                }
-            }
-        }
     }
 
     @Override
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-        if (!instrument.equals(this.instrument) || !period.equals(this.period))
+        if (instrument != this.instrument || period != this.period)
             return;
 
-        if (askBar.getVolume() == 0 || bidBar.getVolume() == 0 || volume == 0)
-            return;
+        final int LOOK_BACK = 400;
+        double[] maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
+                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
+        double[] mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
+                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
 
-        double askPrice = askBar.getClose();
-        double bidPrice = bidBar.getClose();
-        IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
-        double[] mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
-                                     indicatorFilter, candlesBefore, prevBar.getTime(), candlesAfter);
-        double[] mal = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
-                                     indicatorFilter, candlesBefore, prevBar.getTime(), candlesAfter);
-        final int PREV = 1;
-        final int CURR = 0;
-
-        // BUY
-        if (mas[PREV] > mal[PREV] && mas[CURR] < mal[CURR] && askPrice > mas[CURR] && !buyActive) {
-            //console.getOut().printf("pM: %.5f pL: %.5f\n", mas[PREV], mal[PREV]);
-            //console.getOut().printf("cM: %.5f cL: %.5f\n", mas[CURR], mal[CURR]);
-            //console.getOut().println("mas[CURR] ></ mal[CURR] " + bdf.format(prevBar.getTime()));
-            closeOrders(OrderCommand.SELL);
-            sellActive = false;
-            IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
-                                              askPrice - getPipPrice(stopLossPips), askPrice + getPipPrice(takeProfitPips));
-            order.waitForUpdate(200);
-            buyActive = true;
+        // Buy/Long
+        if (maf[LOOK_BACK-2] < mas[LOOK_BACK-2] && maf[LOOK_BACK-1] > mas[LOOK_BACK-1] && askBar.getClose() > maf[LOOK_BACK-1]) {
+            if (order == null || !order.isLong()) {
+                closeOrder(order);
+                order = submitOrder(OrderCommand.BUY);
+            }
         }
-        // SELL
-        if (mas[PREV] < mal[PREV] && mas[CURR] > mal[CURR] && bidPrice < mas[CURR] && !sellActive) {
-            //console.getOut().printf("pM: %.5f pL: %.5f\n", mas[PREV], mal[PREV]);
-            //console.getOut().printf("cM: %.5f cL: %.5f\n", mas[CURR], mal[CURR]);
-            //console.getOut().println("mas[CURR] ><\ mal[CURR] " + bdf.format(prevBar.getTime()));
-            closeOrders(OrderCommand.BUY);
-            buyActive = false;
-            IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
-                                              bidPrice + getPipPrice(stopLossPips), bidPrice - getPipPrice(takeProfitPips));
-            order.waitForUpdate(200);
-            sellActive = true;
-        }
-    }
-
-    private void closeOrders(OrderCommand oc) throws JFException {
-        for (IOrder order : engine.getOrders(instrument)) {
-            if(order.getLabel().substring(0,id.length()).equals(id)) {
-                if(order.getOrderCommand() == oc) order.close();
+        // Sell/Short
+        if (maf[LOOK_BACK-2] > mas[LOOK_BACK-2] && maf[LOOK_BACK-1] < mas[LOOK_BACK-1] && bidBar.getClose() < maf[LOOK_BACK-1]) {
+            if (order == null || order.isLong()) {
+                closeOrder(order);
+                order = submitOrder(OrderCommand.SELL);
             }
         }
     }
 
-    protected String getLabel(Instrument instrument) throws JFException {
-        String label = instrument.name().toLowerCase();
-        return id + label.substring(0, 2) + label.substring(3, 5) + sdf.format(roundTime(lastTick.getTime(), 60000));
+    // Order processing functions
+    private IOrder submitOrder(OrderCommand orderCommand) throws JFException {
+        double stopLossPrice = 0.0, takeProfitPrice = 0.0;
+        double bidPrice = history.getLastTick(instrument).getBid();
+        double askPrice = history.getLastTick(instrument).getAsk();
+        String label = getLabel(instrument);
+        String name = instrument.getPrimaryCurrency() + instrument.getPairsSeparator() + instrument.getSecondaryCurrency();
+
+        if (orderCommand == OrderCommand.BUY) {
+            if (stopLossPips > 0) {
+                stopLossPrice = bidPrice - getPipPrice(stopLossPips);
+            }
+            if (takeProfitPips > 0) {
+                takeProfitPrice = bidPrice + getPipPrice(takeProfitPips);
+            }
+            console.getOut().printf("%s BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
+        } else {
+            if (stopLossPips > 0) {
+                stopLossPrice = askPrice + getPipPrice(stopLossPips);
+            }
+            if (takeProfitPips > 0) {
+                takeProfitPrice = askPrice - getPipPrice(takeProfitPips);
+            }
+            console.getOut().printf("%s SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
+        }
+
+        return engine.submitOrder(label, instrument, orderCommand, volume, 0, slippage, stopLossPrice, takeProfitPrice);
     }
 
-    protected double getPipPrice(double pips) throws JFException {
-        return pips * instrument.getPipValue();
+    private void closeOrder(IOrder order) throws JFException {
+        if (isActive(order)) {
+            order.close();
+            order.waitForUpdate(200, IOrder.State.CLOSED);
+            if (order.getState() == IOrder.State.CLOSED) {
+                this.order = null;
+            } else {
+                console.getWarn().println(order.getLabel() +" Closed failed!");
+            }
+        }
     }
 
-    protected long roundTime(long time, long milliseconds) throws JFException {
-        return time - time % milliseconds + milliseconds;
+    private boolean isActive(IOrder order) throws JFException {
+        return (order != null && order.getState() == IOrder.State.FILLED) ? true : false;
+    }
+
+    private double getPipPrice(double pips) {
+        return pips * this.instrument.getPipValue();
+    }
+
+    private String getLabel(Instrument instrument) {
+        return id + String.format("%10d", ++counter).replace(" ", "0");
     }
 }
