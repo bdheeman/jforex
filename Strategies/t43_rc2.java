@@ -141,8 +141,8 @@ public class t43_rc2 implements IStrategy {
                     console.getOut().println(orderLabel +" <WARN> "+ message.getContent());
                     break;
                 default:
-                    //console.getErr().println(orderLabel +" "+ messageType +" "+ message.getContent());
-                    console.getOut().println(orderLabel +" <????> "+ messageType +" "+ message.getContent());
+                    //console.getErr().println(orderLabel +" *"+ messageType +"* "+ message.getContent());
+                    console.getOut().println(orderLabel +" *"+ messageType +"* "+ message.getContent());
                     break;
             }
         }

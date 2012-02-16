@@ -149,8 +149,8 @@ public class dma_rc2 implements IStrategy {
                     console.getOut().println(orderLabel +" <WARN> "+ message.getContent());
                     break;
                 default:
-                    //console.getErr().println(orderLabel +" "+ messageType +" "+ message.getContent());
-                    console.getOut().println(orderLabel +" <????> "+ messageType +" "+ message.getContent());
+                    //console.getErr().println(orderLabel +" *"+ messageType +"* "+ message.getContent());
+                    console.getOut().println(orderLabel +" *"+ messageType +"* "+ message.getContent());
                     break;
             }
         }
@@ -176,7 +176,7 @@ public class dma_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
-        final int LOOK_BACK = 400;
+        final int LOOK_BACK = 100;
         double[] maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
                                      indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
         double[] mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
