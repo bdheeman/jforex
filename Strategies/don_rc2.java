@@ -215,7 +215,7 @@ public class don_rc2 implements IStrategy {
         return engine.submitOrder(label, instrument, orderCommand, volume, 0, slippage, stopLossPrice, takeProfitPrice);
     }
 
-    private void closeOrder(IOrder order) throws JFException {
+    protected void closeOrder(IOrder order) throws JFException {
         if (isActive(order)) {
             order.close();
             //order.waitForUpdate(200, IOrder.State.CLOSED);
@@ -232,15 +232,15 @@ public class don_rc2 implements IStrategy {
         }
     }
 
-    private boolean isActive(IOrder order) throws JFException {
+    protected boolean isActive(IOrder order) throws JFException {
         return (order != null && order.getState() == IOrder.State.FILLED) ? true : false;
     }
 
-    private String getLabel(Instrument instrument) {
+    protected String getLabel(Instrument instrument) {
         return id + String.format("%10d", ++counter).replace(" ", "0");
     }
 
-    private double getPipPrice(double pips) {
+    protected double getPipPrice(double pips) {
         return pips * instrument.getPipValue();
     }
 }
