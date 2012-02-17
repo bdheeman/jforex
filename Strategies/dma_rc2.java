@@ -35,7 +35,6 @@ public class dma_rc2 implements IStrategy {
     private IEngine engine;
     private IHistory history;
     private IIndicators indicators;
-    private IContext context;
 
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
@@ -82,7 +81,6 @@ public class dma_rc2 implements IStrategy {
         engine = context.getEngine();
         history = context.getHistory();
         indicators = context.getIndicators();
-        this.context = context;
 
         // Do subscribe selected instrument
         Set subscribedInstruments = new HashSet();
@@ -182,6 +180,12 @@ public class dma_rc2 implements IStrategy {
         double[] mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
                                      indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
 
+        // Try early close; maximize profits or minimize losses
+        if (order != null && order.isLong() && bidBar.getOpen() < mas[LOOK_BACK-1])
+            closeOrder(order);
+        if (order != null && !order.isLong() && bidBar.getOpen() > mas[LOOK_BACK-1])
+            closeOrder(order);
+
         // Buy/Long
         if (maf[LOOK_BACK-2] < mas[LOOK_BACK-2] && maf[LOOK_BACK-1] > mas[LOOK_BACK-1] && askBar.getClose() > maf[LOOK_BACK-1]) {
             if (order == null || !order.isLong()) {
@@ -250,6 +254,6 @@ public class dma_rc2 implements IStrategy {
     }
 
     private double getPipPrice(double pips) {
-        return pips * this.instrument.getPipValue();
+        return pips * instrument.getPipValue();
     }
 }

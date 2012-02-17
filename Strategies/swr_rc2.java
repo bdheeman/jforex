@@ -9,10 +9,11 @@ import com.dukascopy.api.IEngine.OrderCommand;
 import com.dukascopy.api.drawings.IRectangleChartObject;
 
 public class swr_rc2 implements IStrategy {
-    private IEngine engine;
-    private IConsole console;
-    private IHistory history;
     private IChart chart;
+    private IConsole console;
+    private IEngine engine;
+    private IHistory history;
+    private ITick prevTick;
 
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
@@ -20,22 +21,21 @@ public class swr_rc2 implements IStrategy {
     public double volume = 0.02;
 
     private IRectangleChartObject rectangle;
-    private ITick formerTick;
     private int counter = 0;
 
     @Override
     public void onStart(IContext context) throws JFException {
-        this.engine = context.getEngine();
-        this.console = context.getConsole();
-        this.history = context.getHistory();
-        this.chart = context.getChart(instrument);
-        this.formerTick = history.getLastTick(instrument);
+        chart = context.getChart(instrument);
+        console = context.getConsole();
+        engine = context.getEngine();
+        history = context.getHistory();
+        prevTick = history.getLastTick(instrument);
 
         ITick tick = history.getLastTick(instrument);
         double askBidDiff = Math.abs(tick.getAsk() - tick.getBid());
 
         // draw rectangle
-        this.rectangle = chart.getChartObjectFactory().createRectangle(getKey("rectangle"), tick.getTime() + Period.TEN_SECS.getInterval(),
+        rectangle = chart.getChartObjectFactory().createRectangle(getKey("rectangle"), tick.getTime() + Period.TEN_SECS.getInterval(),
                          tick.getBid() - askBidDiff, tick.getTime() + 3 * Period.TEN_SECS.getInterval(), tick.getBid() + 3 * askBidDiff);
 
         chart.addToMainChartUnlocked(rectangle);
@@ -62,33 +62,31 @@ public class swr_rc2 implements IStrategy {
 
     @Override
     public void onTick(Instrument instrument, ITick tick) throws JFException {
-        if (!instrument.equals(this.instrument))
+        if (instrument != this.instrument)
             return;
 
-        ITick lastTick = tick;
-
         // if the last tick has come into the rectangle from the left side
-        if (!isInsideRectTime(formerTick) && isInsideRectTime(lastTick) && askInsideRect(lastTick)) {
+        if (!isInsideRectTime(prevTick) && isInsideRectTime(tick) && askInsideRect(tick)) {
             // take profit price = rectangle top
             // stop loss = rectangle bottom
-            engine.submitOrder(getLabel(instrument), this.instrument, OrderCommand.BUY, this.volume, 0, 0, roundToTenthPip( rectangle.getPrice(0) ), roundToTenthPip(rectangle.getPrice(1)) );
+            engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, 0, 0, roundToTenthPip( rectangle.getPrice(0) ), roundToTenthPip(rectangle.getPrice(1)) );
         }
 
         // if the former tick has already been within the time frame of the rectangle but not within the price range
         // and the last tick has come into the rectangle from the top
-        if (isInsideRectTime(lastTick) && bidInsideRect(lastTick) && !bidInsideRect(formerTick) && formerTick.getBid() > rectangle.getPrice(1)) {
+        if (isInsideRectTime(tick) && bidInsideRect(tick) && !bidInsideRect(prevTick) && prevTick.getBid() > rectangle.getPrice(1)) {
             // take profit if price
-            engine.submitOrder(getLabel(instrument), this.instrument, OrderCommand.SELL, this.volume);
+            engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume);
         }
 
         // if the former tick has already been within the time frame of the rectangle but not within the price range
         // and the last tick has come into the rectangle from the bottom
-        if (isInsideRectTime(lastTick) && askInsideRect(lastTick) && !askInsideRect(formerTick) && formerTick.getAsk() < rectangle.getPrice(0)) {
+        if (isInsideRectTime(tick) && askInsideRect(tick) && !askInsideRect(prevTick) && prevTick.getAsk() < rectangle.getPrice(0)) {
             // take profit if price
-            engine.submitOrder(getLabel(instrument), this.instrument, OrderCommand.BUY, this.volume);
+            engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume);
         }
 
-        formerTick = lastTick;
+        prevTick = tick;
     }
 
     @Override
@@ -113,14 +111,8 @@ public class swr_rc2 implements IStrategy {
     }
 
     protected String getLabel(Instrument instrument) {
-        String label = instrument.name();
-        label = label + (counter++);
-        label = label.toUpperCase();
-        return label;
-    }
-
-    private void print(Object o) {
-        console.getOut().println(o);
+        String label = instrument.name().toUpperCase();;
+        return label + (counter++);
     }
 
     private double roundToTenthPip(double price) {

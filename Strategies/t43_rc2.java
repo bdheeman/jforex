@@ -35,7 +35,6 @@ public class t43_rc2 implements IStrategy {
     private IEngine engine;
     private IHistory history;
     private IIndicators indicators;
-    private IContext context;
 
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
@@ -74,7 +73,6 @@ public class t43_rc2 implements IStrategy {
         engine = context.getEngine();
         history = context.getHistory();
         indicators = context.getIndicators();
-        this.context = context;
 
         // Do subscribe selected instrument
         Set subscribedInstruments = new HashSet();
@@ -240,6 +238,6 @@ public class t43_rc2 implements IStrategy {
     }
 
     private double getPipPrice(double pips) {
-        return pips * this.instrument.getPipValue();
+        return pips * instrument.getPipValue();
     }
 }

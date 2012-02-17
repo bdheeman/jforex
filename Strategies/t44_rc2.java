@@ -229,10 +229,8 @@ public class t44_rc2 implements IStrategy {
     }
 
     private String getLabel(Instrument instrument) {
-        String label = instrument.name();
-        label = label + (counter++);
-        label = label.toUpperCase();
-        return label;
+        String label = instrument.name().toUpperCase();
+        return label + (counter++);
     }
 
     private double pipToPrice(double pips) {

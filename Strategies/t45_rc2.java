@@ -36,7 +36,6 @@ public class t45_rc2 implements IStrategy {
     private IEngine engine;
     private IHistory history;
     private IIndicators indicators;
-    private IContext context;
 
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
@@ -77,7 +76,6 @@ public class t45_rc2 implements IStrategy {
         engine = context.getEngine();
         history = context.getHistory();
         indicators = context.getIndicators();
-        this.context = context;
 
         // Do subscribe selected instrument
         Set subscribedInstruments = new HashSet();
@@ -168,14 +166,14 @@ public class t45_rc2 implements IStrategy {
         if (instrument != this.instrument)
             return;
 
-        Object[] bidFact0 = indicators.calculateIndicator(instrument, this.period,
+        Object[] bidFact0 = indicators.calculateIndicator(instrument, period,
                             new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
-        Object[] bidFact1 = indicators.calculateIndicator(instrument, this.period,
+        Object[] bidFact1 = indicators.calculateIndicator(instrument, period,
                             new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
 
-        Object[] askFact0 = indicators.calculateIndicator(instrument, this.period,
+        Object[] askFact0 = indicators.calculateIndicator(instrument, period,
                             new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
-        Object[] askFact1 = indicators.calculateIndicator(instrument, this.period,
+        Object[] askFact1 = indicators.calculateIndicator(instrument, period,
                             new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
 
         double ask0 = (Double) askFact0[0];
@@ -260,7 +258,7 @@ public class t45_rc2 implements IStrategy {
     }
 
     private double getPipPrice(double pips) {
-        return pips * this.instrument.getPipValue();
+        return pips * instrument.getPipValue();
     }
 
     protected long roundTime(long time, long milliseconds) throws JFException {
