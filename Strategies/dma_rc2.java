@@ -94,16 +94,17 @@ public class dma_rc2 implements IStrategy {
         }
 
         // Recall existing; last position, if any
+        this.order = null;
         for (IOrder order : engine.getOrders(instrument)) {
             if(order.getLabel().substring(0,id.length()).equals(id)) {
                 if (this.order != null) {
-                    //console.getWarn().println(this.order.getLabel() +" Order will be ignored, manage it manually");
-                    console.getOut().println(this.order.getLabel() +" <WARN> Order will be ignored, manage it manually");
+                    //console.getWarn().println(this.order.getLabel() +" Order IGNORED, manage it manually");
+                    console.getOut().println(this.order.getLabel() +" <WARN> Order IGNORED, manage it manually");
                 }
                 this.order = order;
-                counter = Integer.valueOf(order.getLabel().substring(5, 14));
-                //console.getNotif().println(order.getLabel() +" Order found, shall try handling it");
-                console.getOut().println(order.getLabel() +" <NOTICE> Order found, shall try handling it");
+                counter = Integer.valueOf(order.getLabel().replaceAll("[^0-9]",""));
+                //console.getNotif().println(order.getLabel() +" Order FOUND, shall try handling it");
+                console.getOut().println(order.getLabel() +" <NOTICE> Order FOUND, shall try handling it");
             }
         }
         if (isActive(order))
@@ -143,8 +144,8 @@ public class dma_rc2 implements IStrategy {
                 case ORDER_FILL_REJECTED:
                 case ORDER_SUBMIT_REJECTED:
                 case ORDERS_MERGE_REJECTED:
-                    //console.getWarn().println(orderLabel +" "+ message.getContent());
-                    console.getOut().println(orderLabel +" <WARN> "+ message.getContent());
+                    //console.getWarn().println(orderLabel +" "+ messageType);
+                    console.getOut().println(orderLabel +" <WARN> "+ messageType);
                     break;
                 default:
                     //console.getErr().println(orderLabel +" *"+ messageType +"* "+ message.getContent());
@@ -217,7 +218,7 @@ public class dma_rc2 implements IStrategy {
             if (takeProfitPips > 0) {
                 takeProfitPrice = bidPrice + getPipPrice(takeProfitPips);
             }
-            console.getOut().printf("%s BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
+            console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
                 stopLossPrice = askPrice + getPipPrice(stopLossPips);
@@ -225,7 +226,7 @@ public class dma_rc2 implements IStrategy {
             if (takeProfitPips > 0) {
                 takeProfitPrice = askPrice - getPipPrice(takeProfitPips);
             }
-            console.getOut().printf("%s SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
+            console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
 
         return engine.submitOrder(label, instrument, orderCommand, volume, 0, slippage, stopLossPrice, takeProfitPrice);
@@ -236,11 +237,14 @@ public class dma_rc2 implements IStrategy {
             order.close();
             //order.waitForUpdate(200, IOrder.State.CLOSED);
             order.waitForUpdate(200);
-            if (order.getState() == IOrder.State.CLOSED) {
-                this.order = null;
-            } else {
-                //console.getWarn().println(order.getLabel() +" Closed failed!");
-                console.getOut().println(order.getLabel() +" <WARN> Closed failed!");
+            switch (order.getState()) {
+                case CREATED:
+                case CLOSED:
+                    this.order = null;
+                    break;
+                default:
+                    //console.getWarn().println(order.getLabel() +" Closed failed!");
+                    console.getOut().println(order.getLabel() +" <WARN> Closed failed!");
             }
         }
     }
