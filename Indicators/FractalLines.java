@@ -37,31 +37,35 @@ public class FractalLines implements IIndicator {
     private OptInputParameterInfo[] optInputParameterInfos;
     private OutputParameterInfo[] outputParameterInfos;
 
+    public static final Color LIGHT_GREEN = new Color(0x80, 0xEE, 0x80);
+    public static final Color LIGHT_RED  = new Color(0xFF, 0x80, 0x80);
+
     private IIndicator FractalIndicator;
     private double[][][] inputs = new double[1][][];
     private double[][] outputs = new double[2][];
     private int bars = 2;
-
-    private double _high_fractal = Double.NaN;
-    private double _low_fractal = Double.NaN;
+    private double maximums = Double.NaN;
+    private double minimums = Double.NaN;
 
     public void onStart(IIndicatorContext context) {
         FractalIndicator = context.getIndicatorsProvider().getIndicator("FRACTAL");
 
-        indicatorInfo = new IndicatorInfo("FRACTALLINES", "Fractal Lines", "Overlap Studies",
-            true, false, true, 1, 1, 2);
-        inputParameterInfos = new InputParameterInfo[] {new InputParameterInfo("Price", InputParameterInfo.Type.PRICE)
-        };
-        optInputParameterInfos = new OptInputParameterInfo[] {new OptInputParameterInfo("Number of bars on sides",
-            OptInputParameterInfo.Type.OTHER, new IntegerRangeDescription(2, 2, 50, 1))
-        };
-        outputParameterInfos = new OutputParameterInfo[] {new OutputParameterInfo("Maximums", OutputParameterInfo.Type.DOUBLE,
-            OutputParameterInfo.DrawingStyle.LINE), new OutputParameterInfo("Minimums", OutputParameterInfo.Type.DOUBLE,
-            OutputParameterInfo.DrawingStyle.LINE)
+        indicatorInfo = new IndicatorInfo("FRACTALLINES", "Fractal Lines Indicator", "Overlap Studies", true, false, true, 1, 1, 2);
+
+        inputParameterInfos = new InputParameterInfo[] {
+            new InputParameterInfo("Price", InputParameterInfo.Type.PRICE)
         };
 
-        outputParameterInfos[0].setColor(Color.BLUE);
-        outputParameterInfos[1].setColor(Color.GREEN);
+        optInputParameterInfos = new OptInputParameterInfo[] {
+            new OptInputParameterInfo("Number of bars on sides", OptInputParameterInfo.Type.OTHER, new IntegerRangeDescription(2, 2, 50, 1))
+        };
+
+        outputParameterInfos = new OutputParameterInfo[] {
+            new OutputParameterInfo("Maximums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_GREEN); }},
+            new OutputParameterInfo("Minimums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_RED); }}
+        };
     }
 
     public IndicatorResult calculate(int startIndex, int endIndex) {
@@ -83,12 +87,12 @@ public class FractalLines implements IIndicator {
 
         for (i = startIndex, j = 0; i <= endIndex; i++, j++) {
             if(fractal_res[0][j] >= inputs[0][2][i])
-                _high_fractal = fractal_res[0][j];
+                maximums = fractal_res[0][j];
             if(fractal_res[1][j] <= inputs[0][3][i] && !Double.isNaN(fractal_res[1][j]) && fractal_res[1][j] > 0)
-                _low_fractal = fractal_res[1][j];
+                minimums = fractal_res[1][j];
 
-            outputs[0][j] = _high_fractal;
-            outputs[1][j] = _low_fractal;
+            outputs[0][j] = maximums;
+            outputs[1][j] = minimums;
         }
         return new IndicatorResult(startIndex, j);
     }

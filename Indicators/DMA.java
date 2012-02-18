@@ -40,7 +40,6 @@ import java.awt.Stroke;
 import java.util.Map;
 
 public class DMA implements IIndicator, IDrawingIndicator {
-    private IIndicatorContext context;
     private IndicatorInfo indicatorInfo;
 
     private int fastTimePeriod = 5;
@@ -68,23 +67,20 @@ public class DMA implements IIndicator, IDrawingIndicator {
     private Object[][] output = new Object[1][];
 
     public void onStart(IIndicatorContext context) {
-        this.context = context;
-
-        IIndicatorsProvider indicatorsProvider = context.getIndicatorsProvider();
-        fastMaIndi = indicatorsProvider.getIndicator("MA");
-        slowMaIndi = indicatorsProvider.getIndicator("MA");
+        fastMaIndi = context.getIndicatorsProvider().getIndicator("MA");
+        slowMaIndi = context.getIndicatorsProvider().getIndicator("MA");
 
         indicatorInfo = new IndicatorInfo("DMA", "Double MA (Ribbon Filled)", "Overlap Studies", true, false, true, 2, 4, 5);
+
         inputParam1 = new InputParameterInfo("Fast MA Applied Price", InputParameterInfo.Type.DOUBLE);
         inputParam2 = new InputParameterInfo("Slow MA Applied Price", InputParameterInfo.Type.DOUBLE);
-
         inputParam1.setAppliedPrice(IIndicators.AppliedPrice.CLOSE);
         inputParam2.setAppliedPrice(IIndicators.AppliedPrice.CLOSE);
-        inputParameterInfos = new InputParameterInfo[] { inputParam1, inputParam2 };
+     
+        inputParameterInfos = new InputParameterInfo[] {inputParam1, inputParam2};
 
         int[] maValues = new int[IIndicators.MaType.values().length];
         String[] maNames = new String[IIndicators.MaType.values().length];
-
         for (int i = 0; i < maValues.length; i++) {
             maValues[i] = i;
             maNames[i] = IIndicators.MaType.values()[i].name();
@@ -98,26 +94,16 @@ public class DMA implements IIndicator, IDrawingIndicator {
         };
 
         outputParameterInfos = new OutputParameterInfo[] {
-        new OutputParameterInfo("Fast MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_GREEN);
-            }
-        },
-        new OutputParameterInfo("Slow MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_RED);
-            }
-        },
-        new OutputParameterInfo("Up Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_UP) {{
-                setColor(DARK_GREEN);
-            }
-        },
-        new OutputParameterInfo("Down Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_DOWN) {{
-                setColor(DARK_RED);
-            }
-        },
-        new OutputParameterInfo("Ribbon", OutputParameterInfo.Type.OBJECT, OutputParameterInfo.DrawingStyle.LINE) {{
-                setDrawnByIndicator(true);
-            }
-        }
+            new OutputParameterInfo("Fast MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_GREEN); }},
+            new OutputParameterInfo("Slow MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_RED); }},
+            new OutputParameterInfo("Up Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_UP) {{
+                setColor(DARK_GREEN); }},
+            new OutputParameterInfo("Down Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_DOWN) {{
+                setColor(DARK_RED); }},
+            new OutputParameterInfo("Ribbon", OutputParameterInfo.Type.OBJECT, OutputParameterInfo.DrawingStyle.LINE) {{
+                setDrawnByIndicator(true); }}
         };
     }
 
@@ -228,7 +214,7 @@ public class DMA implements IIndicator, IDrawingIndicator {
     }
 
     public void setOutputParameter(int index, Object array) {
-        if(index<4) {
+        if (index < 4) {
             outputs[index] = (double[]) array;
         } else {
             output[0] = (Object[]) array;
@@ -279,11 +265,6 @@ public class DMA implements IIndicator, IDrawingIndicator {
                 }
             }
         }
-
         return null;
-    }
-
-    private void print(String sss) {
-        context.getConsole().getOut().println(sss) ;
     }
 }
