@@ -58,11 +58,14 @@ public class don_rc2 implements IStrategy {
     @Configurable(value="Verbose/Debug? (No)")
     public boolean verbose = false;
 
-    private final static int HIGH = 0;
-    private final static int LOW = 1;
     private IOrder order = null;
     private int counter = 0;
     private double volume = 0.001;
+
+    private final static int HIGH = 0;
+    private final static int LOW = 1;
+    private IBar bar1 = null, bar2 = null;
+    private double[] donchian1 = { Double.NaN }, donchian2 = { Double.NaN };
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -157,33 +160,41 @@ public class don_rc2 implements IStrategy {
 
     @Override
     public void onTick(Instrument instrument, ITick tick) throws JFException {
-    }
-
-    @Override
-    public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-        if (instrument != this.instrument || period != this.period)
+        if (instrument != this.instrument)
             return;
 
-        IBar bar2 = history.getBar(instrument, period, OfferSide.BID, 2);
-        IBar bar1 = history.getBar(instrument, period, OfferSide.BID, 1);
-
-        double[] donchian2 = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod, 2);
-        double[] donchian1 = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod, 1);
+        // Act, but after collecting needful data
+        if (bar1 == null || bar2 == null)
+            return;
 
         // Buy/Long
-        if (bar2.getClose() <= donchian2[HIGH] && bar1.getClose() > donchian1[HIGH]) {
+        if (tick.getAsk() > donchian1[HIGH] && bar1.getClose() > donchian1[HIGH] && bar2.getClose() <= donchian2[HIGH]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (bar2.getClose() >= donchian2[LOW] && bar1.getClose() < donchian1[LOW]) {
+        if (tick.getBid() < donchian1[HIGH] && bar1.getClose() < donchian1[LOW] && bar2.getClose() >= donchian2[LOW]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.SELL);
             }
         }
+   }
+
+    @Override
+    public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
+        if (instrument != this.instrument || period != this.period)
+            return;
+
+        // private double[] donchian1 = { Double.NaN }, donchian2 = { Double.NaN };
+        donchian2 = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod, 2);
+        donchian1 = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod, 1);
+
+        // private IBar bar1 = null, bar2 = null;
+        bar2 = history.getBar(instrument, period, OfferSide.BID, 2);
+        bar1 = history.getBar(instrument, period, OfferSide.BID, 1);
     }
 
     // Order processing functions

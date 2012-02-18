@@ -64,6 +64,9 @@ public class t44_rc2 implements IStrategy {
     private int counter = 0;
     private double volume = 0.001;
 
+    private double ask0, ask1, bid0, bid1;
+    private IBar askBar1 = null, bidBar1 = null;
+
     @Override
     public void onStart(IContext context) throws JFException {
         console = context.getConsole();
@@ -160,23 +163,9 @@ public class t44_rc2 implements IStrategy {
         if (instrument != this.instrument)
             return;
 
-        Object[] askFact0 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
-        Object[] askFact1 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
-
-        Object[] bidFact0 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
-        Object[] bidFact1 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
-
-        double ask0 = (Double) askFact0[0];
-        double ask1 = (Double) askFact1[0];
-        double bid0 = (Double) bidFact0[1];
-        double bid1 = (Double) bidFact1[1];
-
-        IBar askBar1 = history.getBar(instrument, period, OfferSide.ASK, 1);
-        IBar bidBar1 = history.getBar(instrument, period, OfferSide.BID, 1);
+        // Act, but after collecting needful data
+        if (bidBar1 == null || askBar1 == null)
+            return;
 
         // Buy/Long
         if (askBar1.getHigh() <= ask1 && tick.getAsk() > ask0) {
@@ -198,6 +187,26 @@ public class t44_rc2 implements IStrategy {
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
         if (instrument != this.instrument || period != this.period)
             return;
+
+        Object[] askFact0 = indicators.calculateIndicator(instrument, period,
+                            new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
+        Object[] askFact1 = indicators.calculateIndicator(instrument, period,
+                            new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
+
+        Object[] bidFact0 = indicators.calculateIndicator(instrument, period,
+                            new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
+        Object[] bidFact1 = indicators.calculateIndicator(instrument, period,
+                            new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
+
+        // private double ask0, ask1, bid0, bid1;
+        ask0 = (Double) askFact0[0];
+        ask1 = (Double) askFact1[0];
+        bid0 = (Double) bidFact0[1];
+        bid1 = (Double) bidFact1[1];
+
+        // private IBar askBar1 = null, bidBar1 = null;
+        askBar1 = history.getBar(instrument, period, OfferSide.ASK, 1);
+        bidBar1 = history.getBar(instrument, period, OfferSide.BID, 1);
     }
 
     // Order processing functions
