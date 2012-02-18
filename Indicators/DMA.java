@@ -76,7 +76,7 @@ public class DMA implements IIndicator, IDrawingIndicator {
         inputParam2 = new InputParameterInfo("Slow MA Applied Price", InputParameterInfo.Type.DOUBLE);
         inputParam1.setAppliedPrice(IIndicators.AppliedPrice.CLOSE);
         inputParam2.setAppliedPrice(IIndicators.AppliedPrice.CLOSE);
-     
+
         inputParameterInfos = new InputParameterInfo[] {inputParam1, inputParam2};
 
         int[] maValues = new int[IIndicators.MaType.values().length];
