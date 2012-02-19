@@ -43,7 +43,7 @@ public class don_rc2 implements IStrategy {
     //@Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("DC Time period")
-    public int dcTimePeriod = 20;
+    public int dcTimePeriod = 14;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
@@ -62,10 +62,9 @@ public class don_rc2 implements IStrategy {
     private int counter = 0;
     private double volume = 0.001;
 
-    private final static int HIGH = 0;
-    private final static int LOW = 1;
+    private final static int HIGH = 0, LOW = 1;
     private IBar bar1 = null, bar2 = null;
-    private double[] donchian1 = { Double.NaN }, donchian2 = { Double.NaN };
+    private double[] donchian1 = {Double.NaN},  donchian2 = {Double.NaN};
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -168,7 +167,7 @@ public class don_rc2 implements IStrategy {
             return;
 
         // Buy/Long
-        if (tick.getAsk() > donchian1[HIGH] && bar1.getClose() > donchian1[HIGH] && bar2.getClose() <= donchian2[HIGH]) {
+        if (tick.getBid() > donchian1[HIGH] && bar1.getClose() > donchian1[HIGH] && bar2.getClose() <= donchian2[HIGH]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.BUY);
@@ -181,7 +180,7 @@ public class don_rc2 implements IStrategy {
                 order = submitOrder(OrderCommand.SELL);
             }
         }
-   }
+    }
 
     @Override
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
