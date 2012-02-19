@@ -69,11 +69,13 @@ public class dma_rc2 implements IStrategy {
     @Configurable(value="Verbose/Debug? (No)")
     public boolean verbose = false;
 
-    private final static int HIGH = 0;
-    private final static int LOW = 1;
     private IOrder order = null;
     private int counter = 0;
     private double volume = 0.001;
+
+    private final static int HIGH = 0, LOW = 1;
+    private final static int LOOK_BACK = 4000;
+    private double[] maf = {Double.NaN},  mas = {Double.NaN};
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -168,39 +170,47 @@ public class dma_rc2 implements IStrategy {
 
     @Override
     public void onTick(Instrument instrument, ITick tick) throws JFException {
-    }
-
-    @Override
-    public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-        if (instrument != this.instrument || period != this.period)
+        if (instrument != this.instrument)
             return;
 
-        final int LOOK_BACK = 100;
-        double[] maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
-                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
-        double[] mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
-                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
-
-        // Try early close; maximize profits or minimize losses
-        if (order != null && order.isLong() && bidBar.getOpen() < mas[LOOK_BACK-1])
-            closeOrder(order);
-        if (order != null && !order.isLong() && bidBar.getOpen() > mas[LOOK_BACK-1])
-            closeOrder(order);
+        // Act, but after collecting needful data
+        if (Double.isNaN(maf[LOOK_BACK-2]) || Double.isNaN(mas[LOOK_BACK-2]))
+            return;
 
         // Buy/Long
-        if (maf[LOOK_BACK-2] < mas[LOOK_BACK-2] && maf[LOOK_BACK-1] > mas[LOOK_BACK-1] && askBar.getClose() > maf[LOOK_BACK-1]) {
+        if (maf[LOOK_BACK-2] < mas[LOOK_BACK-2] && maf[LOOK_BACK-1] > mas[LOOK_BACK-1] && tick.getBid() > mas[LOOK_BACK-1]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (maf[LOOK_BACK-2] > mas[LOOK_BACK-2] && maf[LOOK_BACK-1] < mas[LOOK_BACK-1] && bidBar.getClose() < maf[LOOK_BACK-1]) {
+        if (maf[LOOK_BACK-2] > mas[LOOK_BACK-2] && maf[LOOK_BACK-1] < mas[LOOK_BACK-1] && tick.getBid() < mas[LOOK_BACK-1]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.SELL);
             }
         }
+   }
+
+    @Override
+    public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
+        if (instrument != this.instrument || period != this.period)
+            return;
+
+        // private double[] maf = {Double.NaN},  mas = {Double.NaN};
+        maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
+                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
+        mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
+                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
+
+        // Try early close; maximize profits or minimize losses
+        if (order != null && order.isLong())
+            if (bidBar.getOpen() < mas[LOOK_BACK-1] && maf[LOOK_BACK-1] < maf[LOOK_BACK-2])
+                closeOrder(order);
+        if (order == null || !order.isLong())
+            if (bidBar.getOpen() > mas[LOOK_BACK-1] && maf[LOOK_BACK-1] > maf[LOOK_BACK-2])
+                closeOrder(order);
     }
 
     // Order processing functions
