@@ -61,11 +61,11 @@ public class t43_rc2 implements IStrategy {
     @Configurable(value="Verbose/Debug? (No)")
     public boolean verbose = false;
 
-    private final static int HIGH = 0;
-    private final static int LOW = 1;
     private IOrder order = null;
     private int counter = 0;
     private double volume = 0.001;
+
+    private final static int LOOK_BACK = 4000;
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -167,7 +167,6 @@ public class t43_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
-        final int LOOK_BACK = 400;
         double[][] te = indicators.trendEnv(instrument, period, OfferSide.BID, teTimePeriod, teDeviation,
                                             indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
 
