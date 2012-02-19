@@ -45,7 +45,7 @@ public class t44_rc2 implements IStrategy {
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("Bars On Sides")
-    public int barsOnSides = 12;
+    public int barsOnSides = 10;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
@@ -64,8 +64,8 @@ public class t44_rc2 implements IStrategy {
     private int counter = 0;
     private double volume = 0.001;
 
-    private double ask0, ask1, bid0, bid1;
     private IBar askBar1 = null, bidBar1 = null;
+    private double[] askFL = {Double.NaN, Double.NaN}, bidFL = {Double.NaN, Double.NaN};
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -168,14 +168,14 @@ public class t44_rc2 implements IStrategy {
             return;
 
         // Buy/Long
-        if (askBar1.getHigh() <= ask1 && tick.getAsk() > ask0) {
+        if (askBar1.getHigh() <= askFL[1] && tick.getAsk() > askFL[0]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (bidBar1.getLow() >= bid1 && tick.getBid() < bid0) {
+        if (bidBar1.getLow() >= bidFL[1] && tick.getBid() < bidFL[0]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.SELL);
@@ -198,11 +198,11 @@ public class t44_rc2 implements IStrategy {
         Object[] bidFact1 = indicators.calculateIndicator(instrument, period,
                             new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
 
-        // private double ask0, ask1, bid0, bid1;
-        ask0 = (Double) askFact0[0];
-        ask1 = (Double) askFact1[0];
-        bid0 = (Double) bidFact0[1];
-        bid1 = (Double) bidFact1[1];
+        // private double[] askFL = {Double.NaN, Double.NaN}, bidFL = {Double.NaN, Double.NaN};
+        askFL[0] = (Double) askFact0[0];
+        askFL[1] = (Double) askFact1[0];
+        bidFL[0] = (Double) bidFact0[1];
+        bidFL[1] = (Double) bidFact1[1];
 
         // private IBar askBar1 = null, bidBar1 = null;
         askBar1 = history.getBar(instrument, period, OfferSide.ASK, 1);
