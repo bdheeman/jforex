@@ -174,7 +174,7 @@ public class don_rc2 implements IStrategy {
             }
         }
         // Sell/Short
-        if (tick.getBid() < donchian1[HIGH] && bar1.getClose() < donchian1[LOW] && bar2.getClose() >= donchian2[LOW]) {
+        if (tick.getBid() < donchian1[LOW] && bar1.getClose() < donchian1[LOW] && bar2.getClose() >= donchian2[LOW]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.SELL);
