@@ -54,7 +54,7 @@ public class t45_rc2 implements IStrategy {
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
     @Configurable(value="Slippage (pips)", stepSize=0.1)
-    public double slippage = 0.5;
+    public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
     public double stopLossPips = 0;
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
