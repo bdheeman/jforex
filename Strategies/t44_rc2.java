@@ -30,7 +30,7 @@ import com.dukascopy.api.IIndicators.AppliedPrice;
 import com.dukascopy.api.IIndicators.MaType;
 import com.dukascopy.api.indicators.IIndicator;
 
-public class t45_rc2 implements IStrategy {
+public class t44_rc2 implements IStrategy {
     private final String id = this.getClass().getName().substring(27, 31).toUpperCase();
     private IConsole console;
     private IEngine engine;
