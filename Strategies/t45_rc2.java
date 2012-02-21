@@ -40,16 +40,16 @@ public class t45_rc2 implements IStrategy {
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
     @Configurable("Period")
-    public Period period = Period.ONE_MIN;
+    public Period period = Period.TEN_MINS;
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("Bars On Sides")
     public int barsOnSides = 10;
     @Configurable(value="Breakeven (pips)", stepSize=0.5)
-    public double breakevenPips = 2;
+    public double breakevenPips = 10;
     @Configurable(value="Threshold (pips)", stepSize=0.5)
-    public double thresholdPips = 14;
+    public double thresholdPips = 28;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
