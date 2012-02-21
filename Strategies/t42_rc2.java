@@ -219,12 +219,12 @@ public class t42_rc2 implements IStrategy {
             return;
 
         IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
-        double[][] ha = indicators.heikenAshi(instrument, period, OfferSide.BID,
+        double[][] ha = indicators.heikinAshi(instrument, period, OfferSide.BID,
             indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
-        //final int OPEN = 0; final int HIGH = 3; final int LOW = 2; final int CLOSE = 1;
         final int OPEN = 0; final int HIGH = 2; final int LOW = 3; final int CLOSE = 1;
+        //final int OPEN = 0; final int HIGH = 3; final int LOW = 2; final int CLOSE = 1;
 
         double average = priceToPips(((ha[PREV][HIGH] - ha[PREV][LOW]) + (ha[PREV-1][HIGH] - ha[PREV-1][LOW])) / 2.0);
         double spread = askPrice - bidPrice;
