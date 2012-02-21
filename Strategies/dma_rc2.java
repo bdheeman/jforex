@@ -43,23 +43,23 @@ public class dma_rc2 implements IStrategy {
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
-    @Configurable("Fast MA Time Period")
-    public int timePeriodFast = 8;
-    @Configurable("Fast MA Type")
-    public MaType maTypeFast = MaType.T3;
-    //@Configurable("Fast MA Applied Price")
+    //@Configurable("MA Applied Price (Fast)")
     public AppliedPrice appliedPriceFast = AppliedPrice.CLOSE;
-    @Configurable("Slow MA Time Period")
-    public int timePeriodSlow = 40;
-    @Configurable("Slow MA Type")
-    public MaType maTypeSlow = MaType.T3;
-    //@Configurable("Slow MA Applied Price")
+    @Configurable("MA Time Period (Fast)")
+    public int timePeriodFast = 8;
+    @Configurable("MA Type (Fast)")
+    public MaType maTypeFast = MaType.T3;
+    //@Configurable("MA Applied Price (Slow)")
     public AppliedPrice appliedPriceSlow = AppliedPrice.CLOSE;
+    @Configurable("MA Time Period (Slow)")
+    public int timePeriodSlow = 40;
+    @Configurable("MA Type (Slow)")
+    public MaType maTypeSlow = MaType.T3;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
     @Configurable(value="Slippage (pips)", stepSize=0.1)
-    public double slippage = 0.5;
+    public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
     public double stopLossPips = 0;
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
@@ -200,9 +200,9 @@ public class dma_rc2 implements IStrategy {
 
         // private double[] maf = {Double.NaN},  mas = {Double.NaN};
         maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
-                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
+            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
         mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
-                                     indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
+            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
 
         // Try early close; maximize profits or minimize losses
         if (order != null && order.isLong())
