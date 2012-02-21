@@ -30,7 +30,7 @@ import com.dukascopy.api.IIndicators.AppliedPrice;
 import com.dukascopy.api.IIndicators.MaType;
 import com.dukascopy.api.indicators.IIndicator;
 
-public class t44_rc2 implements IStrategy {
+public class t45_rc2 implements IStrategy {
     private final String id = this.getClass().getName().substring(27, 31).toUpperCase();
     private IConsole console;
     private IEngine engine;
@@ -46,6 +46,10 @@ public class t44_rc2 implements IStrategy {
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("Bars On Sides")
     public int barsOnSides = 10;
+    @Configurable(value="Breakeven (pips)", stepSize=0.5)
+    public double breakevenPips = 10;
+    @Configurable(value="Threshold (pips)", stepSize=0.5)
+    public double thresholdPips = 28;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
@@ -167,6 +171,23 @@ public class t44_rc2 implements IStrategy {
         if (bidBar1 == null || askBar1 == null)
             return;
 
+        // Profits should not turn into losses, huh
+        if (isActive(order) && order.isLong() && order.getProfitLossInPips() > breakevenPips) {
+            if (bidBar1.getLow() >= bidFL[1] && tick.getBid() < bidFL[0]) {
+               closeOrder(order);
+            }
+        }
+        if (isActive(order) && !order.isLong() && order.getProfitLossInPips() > breakevenPips) {
+            if (askBar1.getHigh() <= askFL[1] && tick.getAsk() > askFL[0]) {
+               closeOrder(order);
+            }
+        }
+
+        // Is it consolidation, eh
+        if (priceToPips(askFL[0] - bidFL[0]) < thresholdPips) {
+            return;
+        }
+
         // Buy/Long
         if (askBar1.getHigh() <= askFL[1] && tick.getAsk() > askFL[0]) {
             if (order == null || !order.isLong()) {
@@ -265,5 +286,9 @@ public class t44_rc2 implements IStrategy {
 
     protected double getPipPrice(double pips) {
         return pips * instrument.getPipValue();
+    }
+
+    protected double priceToPips(double price) {
+        return price * Math.pow(10, instrument.getPipScale());
     }
 }
