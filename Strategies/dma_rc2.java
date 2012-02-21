@@ -203,14 +203,6 @@ public class dma_rc2 implements IStrategy {
             indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
         mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
             indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
-
-        // Try early close; maximize profits or minimize losses
-        if (order != null && order.isLong())
-            if (bidBar.getOpen() < mas[LOOK_BACK-1] && maf[LOOK_BACK-1] < maf[LOOK_BACK-2])
-                closeOrder(order);
-        if (order == null || !order.isLong())
-            if (bidBar.getOpen() > mas[LOOK_BACK-1] && maf[LOOK_BACK-1] > maf[LOOK_BACK-2])
-                closeOrder(order);
     }
 
     // Order processing functions
