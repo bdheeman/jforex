@@ -36,7 +36,7 @@ public class swr_rc2 implements IStrategy {
 
         // draw rectangle
         rectangle = chart.getChartObjectFactory().createRectangle(getKey("rectangle"), tick.getTime() + Period.TEN_SECS.getInterval(),
-                         tick.getBid() - askBidDiff, tick.getTime() + 3 * Period.TEN_SECS.getInterval(), tick.getBid() + 3 * askBidDiff);
+                    tick.getBid() - askBidDiff, tick.getTime() + 3 * Period.TEN_SECS.getInterval(), tick.getBid() + 3 * askBidDiff);
 
         chart.addToMainChartUnlocked(rectangle);
     }

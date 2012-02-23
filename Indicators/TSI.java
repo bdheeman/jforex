@@ -30,12 +30,14 @@ public class TSI implements IIndicator {
 
     public void onStart(IIndicatorContext context) {
         indicatorInfo = new IndicatorInfo("TSI", "True Strength Index", "Momentum Indicators",
-        		false, false, false, 1, 1, 1);
+                                          false, false, false, 1, 1, 1);
         inputParameterInfos = new InputParameterInfo[] {new InputParameterInfo("Input data", InputParameterInfo.Type.DOUBLE)};
         optInputParameterInfos = new OptInputParameterInfo[] {new OptInputParameterInfo("Time period", OptInputParameterInfo.Type.OTHER,
-                new IntegerRangeDescription(2, 2, 100, 1))};
+                    new IntegerRangeDescription(2, 2, 100, 1))
+        };
         outputParameterInfos = new OutputParameterInfo[] {new OutputParameterInfo("TSI", OutputParameterInfo.Type.DOUBLE,
-                OutputParameterInfo.DrawingStyle.LINE)};
+                    OutputParameterInfo.DrawingStyle.LINE)
+        };
     }
 
     public IndicatorResult calculate(int startIndex, int endIndex) {
@@ -45,10 +47,10 @@ public class TSI implements IIndicator {
         }
         int i, j;
         for (i = startIndex, j = 0; i <= endIndex; i++, j++) {
-        	double value = 0;
-        	for (int k = timePeriod; k > 0; k--) {
-        		value += inputs[0][i - k];
-        	}
+            double value = 0;
+            for (int k = timePeriod; k > 0; k--) {
+                value += inputs[0][i - k];
+            }
             outputs[0][j] = value;
         }
         return new IndicatorResult(startIndex, j);

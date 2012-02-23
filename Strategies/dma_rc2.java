@@ -92,7 +92,7 @@ public class dma_rc2 implements IStrategy {
         // Add indicators for visual testing
         IChart chart = context.getChart(instrument);
         if (chart != null && engine.getType() == IEngine.Type.TEST) {
-            chart.addIndicator(indicators.getIndicator("DMA"), new Object[]{timePeriodFast, maTypeFast.ordinal(), timePeriodSlow, maTypeSlow.ordinal()});
+            chart.addIndicator(indicators.getIndicator("DMA"), new Object[] {timePeriodFast, maTypeFast.ordinal(), timePeriodSlow, maTypeSlow.ordinal()});
         }
 
         // Recall existing; last position, if any
@@ -127,7 +127,7 @@ public class dma_rc2 implements IStrategy {
             String orderLabel = message.getOrder().getLabel();
             IMessage.Type messageType = message.getType();
             switch (messageType) {
-                // Ignore the following
+                    // Ignore the following
                 case ORDER_FILL_OK:
                 case ORDER_CHANGED_OK:
                     break;
@@ -191,7 +191,7 @@ public class dma_rc2 implements IStrategy {
                 order = submitOrder(OrderCommand.SELL);
             }
         }
-   }
+    }
 
     @Override
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
@@ -200,9 +200,9 @@ public class dma_rc2 implements IStrategy {
 
         // private double[] maf = {Double.NaN},  mas = {Double.NaN};
         maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
-            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
+                            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
         mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
-            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
+                            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
     }
 
     // Order processing functions

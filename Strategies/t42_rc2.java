@@ -106,8 +106,8 @@ public class t42_rc2 implements IStrategy {
         IChart chart = context.getChart(instrument);
         if (chart != null && engine.getType() == IEngine.Type.TEST) {
             chart.addIndicator(indicators.getIndicator("HEIKINASHI"));
-            chart.addIndicator(indicators.getIndicator("DONCHIANCHANNEL"), new Object[]{dcTimePeriod});
-            chart.addIndicator(indicators.getIndicator("DMA"), new Object[]{maTimePeriodFast, maTypeFast.ordinal(), maTimePeriodSlow, maTypeSlow.ordinal()});
+            chart.addIndicator(indicators.getIndicator("DONCHIANCHANNEL"), new Object[] {dcTimePeriod});
+            chart.addIndicator(indicators.getIndicator("DMA"), new Object[] {maTimePeriodFast, maTypeFast.ordinal(), maTimePeriodSlow, maTypeSlow.ordinal()});
         }
     }
 
@@ -122,7 +122,7 @@ public class t42_rc2 implements IStrategy {
             String orderLabel = message.getOrder().getLabel();
             IMessage.Type messageType = message.getType();
             switch (messageType) {
-                // Ignore the following
+                    // Ignore the following
                 case ORDER_FILL_OK:
                 case ORDER_CHANGED_OK:
                     break;
@@ -220,11 +220,11 @@ public class t42_rc2 implements IStrategy {
 
         IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
         double[][] ha = indicators.heikinAshi(instrument, period, OfferSide.BID,
-            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                              indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
-        final int OPEN = 0; final int HIGH = 2; final int LOW = 3; final int CLOSE = 1;
-        //final int OPEN = 0; final int HIGH = 3; final int LOW = 2; final int CLOSE = 1;
+        final int OPEN = 0, HIGH = 2, LOW = 3, CLOSE = 1; /* DEMO */
+        //final int OPEN = 0, HIGH = 3, LOW = 2, CLOSE = 1; /* LIVE */
 
         double average = priceToPips(((ha[PREV][HIGH] - ha[PREV][LOW]) + (ha[PREV-1][HIGH] - ha[PREV-1][LOW])) / 2.0);
         double spread = askPrice - bidPrice;
@@ -243,14 +243,14 @@ public class t42_rc2 implements IStrategy {
 
         // Major indicators
         double[][] dc = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
-            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
-        final int UPPER = 0; final int LOWER = 1;
+        final int UPPER = 0, LOWER = 1;
 
         double[] maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, maTimePeriodFast, maTypeFast,
-            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                     indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
         double[] mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, maTimePeriodSlow, maTypeSlow,
-            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                     indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         // Take care, your profits should not turn into losses
         if (askPrice < maf[PREV]) {
@@ -274,10 +274,10 @@ public class t42_rc2 implements IStrategy {
                     if (order.isLong() && order.getProfitLossInPips() < 0) order.close();
                 }
             }
-        } else if  (closeHugeLoss && bidPrice < mas[PREV]) {
+        } else if (closeHugeLoss && bidPrice < mas[PREV]) {
             for (IOrder order : engine.getOrders()) {
-            if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
-                if (!order.isLong() && order.getProfitLossInPips() < 0) order.close();
+                if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
+                    if (!order.isLong() && order.getProfitLossInPips() < 0) order.close();
                 }
             }
         }

@@ -61,10 +61,14 @@ public class FractalLines implements IIndicator {
         };
 
         outputParameterInfos = new OutputParameterInfo[] {
-            new OutputParameterInfo("Maximums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_GREEN); }},
-            new OutputParameterInfo("Minimums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_RED); }}
+        new OutputParameterInfo("Maximums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_GREEN);
+            }
+        },
+        new OutputParameterInfo("Minimums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_RED);
+            }
+        }
         };
     }
 

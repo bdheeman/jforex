@@ -94,16 +94,26 @@ public class DMA implements IIndicator, IDrawingIndicator {
         };
 
         outputParameterInfos = new OutputParameterInfo[] {
-            new OutputParameterInfo("Fast MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_GREEN); }},
-            new OutputParameterInfo("Slow MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_RED); }},
-            new OutputParameterInfo("Up Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_UP) {{
-                setColor(DARK_GREEN); }},
-            new OutputParameterInfo("Down Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_DOWN) {{
-                setColor(DARK_RED); }},
-            new OutputParameterInfo("Ribbon", OutputParameterInfo.Type.OBJECT, OutputParameterInfo.DrawingStyle.LINE) {{
-                setDrawnByIndicator(true); }}
+        new OutputParameterInfo("Fast MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_GREEN);
+            }
+        },
+        new OutputParameterInfo("Slow MA", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
+                setColor(LIGHT_RED);
+            }
+        },
+        new OutputParameterInfo("Up Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_UP) {{
+                setColor(DARK_GREEN);
+            }
+        },
+        new OutputParameterInfo("Down Arrow", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.ARROW_SYMBOL_DOWN) {{
+                setColor(DARK_RED);
+            }
+        },
+        new OutputParameterInfo("Ribbon", OutputParameterInfo.Type.OBJECT, OutputParameterInfo.DrawingStyle.LINE) {{
+                setDrawnByIndicator(true);
+            }
+        }
         };
     }
 
@@ -192,24 +202,24 @@ public class DMA implements IIndicator, IDrawingIndicator {
 
     public void setOptInputParameter(int index, Object value) {
         switch (index) {
-        case 0:
-            fastTimePeriod = (Integer) value;
-            fastMaIndi.setOptInputParameter(0, fastTimePeriod);
-            break;
-        case 1:
-            int maFastType = (Integer) value;
-            fastMaIndi.setOptInputParameter(1,IIndicators.MaType.values()[maFastType].ordinal());
-            break;
-        case 2:
-            slowTimePeriod = (Integer) value;
-            slowMaIndi.setOptInputParameter(0, slowTimePeriod);
-            break;
-        case 3:
-            int maSlowType = (Integer) value;
-            slowMaIndi.setOptInputParameter(1,IIndicators.MaType.values()[maSlowType].ordinal());
-            break;
-        default:
-            throw new ArrayIndexOutOfBoundsException(index);
+            case 0:
+                fastTimePeriod = (Integer) value;
+                fastMaIndi.setOptInputParameter(0, fastTimePeriod);
+                break;
+            case 1:
+                int maFastType = (Integer) value;
+                fastMaIndi.setOptInputParameter(1,IIndicators.MaType.values()[maFastType].ordinal());
+                break;
+            case 2:
+                slowTimePeriod = (Integer) value;
+                slowMaIndi.setOptInputParameter(0, slowTimePeriod);
+                break;
+            case 3:
+                int maSlowType = (Integer) value;
+                slowMaIndi.setOptInputParameter(1,IIndicators.MaType.values()[maSlowType].ordinal());
+                break;
+            default:
+                throw new ArrayIndexOutOfBoundsException(index);
         }
     }
 

@@ -121,7 +121,7 @@ public class t44_rc2 implements IStrategy {
             String orderLabel = message.getOrder().getLabel();
             IMessage.Type messageType = message.getType();
             switch (messageType) {
-                // Ignore the following
+                    // Ignore the following
                 case ORDER_FILL_OK:
                 case ORDER_CHANGED_OK:
                     break;
@@ -174,12 +174,12 @@ public class t44_rc2 implements IStrategy {
         // Profits should not turn into losses, huh
         if (isActive(order) && order.isLong() && order.getProfitLossInPips() > breakevenPips) {
             if (bidBar1.getLow() >= bidFL[1] && tick.getBid() < bidFL[0]) {
-               closeOrder(order);
+                closeOrder(order);
             }
         }
         if (isActive(order) && !order.isLong() && order.getProfitLossInPips() > breakevenPips) {
             if (askBar1.getHigh() <= askFL[1] && tick.getAsk() > askFL[0]) {
-               closeOrder(order);
+                closeOrder(order);
             }
         }
 

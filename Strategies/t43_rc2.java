@@ -82,7 +82,7 @@ public class t43_rc2 implements IStrategy {
         // Add indicators for visual testing
         IChart chart = context.getChart(instrument);
         if (chart != null && engine.getType() == IEngine.Type.TEST) {
-            chart.addIndicator(indicators.getIndicator("TRENDENVELOPES"), new Object[]{teTimePeriod, teDeviation});
+            chart.addIndicator(indicators.getIndicator("TRENDENVELOPES"), new Object[] {teTimePeriod, teDeviation});
         }
 
         // Recall existing; last position, if any
@@ -117,7 +117,7 @@ public class t43_rc2 implements IStrategy {
             String orderLabel = message.getOrder().getLabel();
             IMessage.Type messageType = message.getType();
             switch (messageType) {
-                // Ignore the following
+                    // Ignore the following
                 case ORDER_FILL_OK:
                 case ORDER_CHANGED_OK:
                     break;
