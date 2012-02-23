@@ -114,6 +114,7 @@ public class dma_rc2 implements IStrategy {
             console.getOut().println(order.getLabel() +" <INFO> ORDER_FOUND_OK");
     }
 
+    @Override
     public void onAccount(IAccount account) throws JFException {
         // Risk management, huh
         volume = account.getEquity() / (100 * account.getLeverage()) * (riskPercent / 100);
@@ -121,6 +122,7 @@ public class dma_rc2 implements IStrategy {
         if (volume < 0.001) volume = 0.001;
     }
 
+    @Override
     public void onMessage(IMessage message) throws JFException {
         // Print messages, but related to own orders
         if (message.getOrder() != null && message.getOrder().getLabel().substring(0,id.length()).equals(id)) {
@@ -157,6 +159,7 @@ public class dma_rc2 implements IStrategy {
         }
     }
 
+    @Override
     public void onStop() throws JFException {
         if (!closeAllOnStop)
             return;
