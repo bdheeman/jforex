@@ -105,9 +105,9 @@ public class t42_rc2 implements IStrategy {
         // Add indicators for visual testing
         IChart chart = context.getChart(instrument);
         if (chart != null && engine.getType() == IEngine.Type.TEST) {
-            chart.addIndicator(indicators.getIndicator("HEIKINASHI"));
             chart.addIndicator(indicators.getIndicator("DONCHIANCHANNEL"), new Object[] {dcTimePeriod});
             chart.addIndicator(indicators.getIndicator("DMA"), new Object[] {maTimePeriodFast, maTypeFast.ordinal(), maTimePeriodSlow, maTypeSlow.ordinal()});
+            chart.addIndicator(indicators.getIndicator("HEIKINASHI"));
         }
     }
 
