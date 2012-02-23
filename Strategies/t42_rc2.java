@@ -72,11 +72,11 @@ public class t42_rc2 implements IStrategy {
     @Configurable(value="Slippage (Pippets)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (factor)", stepSize=0.1)
-    public double mStopLossPips = 2.1;
-    private double stopLossPips = mStopLossPips;
+    public double stopLossFactor = 2.1;
+    private double stopLossPips = stopLossFactor;
     @Configurable(value="Take Profit (factor)", stepSize=0.1)
-    public double mTakeProfitPips = 5.5;
-    private double takeProfitPips = mTakeProfitPips;
+    public double takeProfitFactor = 5.5;
+    private double takeProfitPips = takeProfitFactor;
     @Configurable("Use StopLoss? (No)")
     public boolean useStopLoss = false;
     @Configurable("Close HugeLoss? (No)")
@@ -229,13 +229,13 @@ public class t42_rc2 implements IStrategy {
         double average = priceToPips(((ha[PREV][HIGH] - ha[PREV][LOW]) + (ha[PREV-1][HIGH] - ha[PREV-1][LOW])) / 2.0);
         double spread = askPrice - bidPrice;
 
-        stopLossPips = roundPips(mStopLossPips * average);
-        if (stopLossPips < mStopLossPips)
+        stopLossPips = roundPips(stopLossFactor * average);
+        if (stopLossPips < stopLossFactor)
             return;
 
         double volume = getLotSize(account);
-        takeProfitPips = roundPips(mTakeProfitPips * average);
-        if (takeProfitPips < mTakeProfitPips)
+        takeProfitPips = roundPips(takeProfitFactor * average);
+        if (takeProfitPips < takeProfitFactor)
             return;
 
         if (!useStopLoss)
@@ -256,13 +256,13 @@ public class t42_rc2 implements IStrategy {
         if (askPrice < maf[PREV]) {
             for (IOrder order : engine.getOrders()) {
                 if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
-                    if (order.isLong() && order.getProfitLossInPips() > mStopLossPips) order.close();
+                    if (order.isLong() && order.getProfitLossInPips() > stopLossFactor) order.close();
                 }
             }
         } else if  (bidPrice > maf[PREV]) {
             for (IOrder order : engine.getOrders()) {
                 if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
-                    if (!order.isLong() && order.getProfitLossInPips() > mStopLossPips) order.close();
+                    if (!order.isLong() && order.getProfitLossInPips() > stopLossFactor) order.close();
                 }
             }
         }
