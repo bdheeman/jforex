@@ -19,7 +19,6 @@ package jforex.strategies.bdheeman;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
@@ -46,9 +45,9 @@ public class t44_rc2 implements IStrategy {
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("Bars On Sides")
     public int barsOnSides = 10;
-    @Configurable(value="Breakeven (pips)", stepSize=0.5)
+    //@Configurable(value="Breakeven (pips)", stepSize=0.5)
     public double breakevenPips = 10;
-    @Configurable(value="Threshold (pips)", stepSize=0.5)
+    //@Configurable(value="Threshold (pips)", stepSize=0.5)
     public double thresholdPips = 28;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
@@ -61,8 +60,6 @@ public class t44_rc2 implements IStrategy {
     public double takeProfitPips = 0;
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
-    @Configurable(value="Verbose/Debug? (No)")
-    public boolean verbose = false;
 
     private IOrder order = null;
     private int counter = 0;

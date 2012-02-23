@@ -79,8 +79,6 @@ public class t42_rc2 implements IStrategy {
     private double takeProfitPips = takeProfitFactor;
     @Configurable("Use StopLoss? (No)")
     public boolean useStopLoss = false;
-    @Configurable("Close HugeLoss? (No)")
-    public boolean closeHugeLoss = false;
     @Configurable("Close all on Stop? (Yes)")
     public boolean closeAllOnStop = true;
     @Configurable("Debug/Verbose? (No)")
@@ -263,21 +261,6 @@ public class t42_rc2 implements IStrategy {
             for (IOrder order : engine.getOrders()) {
                 if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
                     if (!order.isLong() && order.getProfitLossInPips() > stopLossFactor) order.close();
-                }
-            }
-        }
-
-        // Risk management; book growing/huge losses
-        if (closeHugeLoss && askPrice > mas[PREV]) {
-            for (IOrder order : engine.getOrders()) {
-                if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
-                    if (order.isLong() && order.getProfitLossInPips() < 0) order.close();
-                }
-            }
-        } else if (closeHugeLoss && bidPrice < mas[PREV]) {
-            for (IOrder order : engine.getOrders()) {
-                if (order.getLabel().substring(0,id.length()).equals(id) && order.getState() == IOrder.State.FILLED) {
-                    if (!order.isLong() && order.getProfitLossInPips() < 0) order.close();
                 }
             }
         }

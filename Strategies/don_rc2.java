@@ -43,7 +43,7 @@ public class don_rc2 implements IStrategy {
     //@Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("DC Time period")
-    public int dcTimePeriod = 14;
+    public int dcTimePeriod = 20;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
@@ -55,16 +55,15 @@ public class don_rc2 implements IStrategy {
     public double takeProfitPips = 0;
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
-    @Configurable(value="Verbose/Debug? (No)")
-    public boolean verbose = false;
 
     private IOrder order = null;
     private int counter = 0;
     private double volume = 0.001;
 
+    private IBar[] bar = {null, null};
+    private double[][] dc = {{Double.NaN, Double.NaN},{Double.NaN, Double.NaN}};
     private final static int HIGH = 0, LOW = 1;
-    private IBar bar1 = null, bar2 = null;
-    private double[] donchian1 = {Double.NaN}, donchian2 = {Double.NaN};
+    private final static int PREV = 1; /* N-1 */
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -166,18 +165,18 @@ public class don_rc2 implements IStrategy {
             return;
 
         // Act, but after collecting needful data
-        if (bar1 == null || bar2 == null)
+        if (bar[PREV-1] == null || bar[PREV] == null)
             return;
 
         // Buy/Long
-        if (tick.getBid() > donchian1[HIGH] && bar1.getClose() > donchian1[HIGH] && bar2.getClose() <= donchian2[HIGH]) {
+        if (tick.getBid() > dc[PREV-1][HIGH] && bar[PREV-1].getClose() > dc[PREV-1][HIGH] && bar[PREV].getClose() <= dc[PREV][HIGH]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (tick.getBid() < donchian1[LOW] && bar1.getClose() < donchian1[LOW] && bar2.getClose() >= donchian2[LOW]) {
+        if (tick.getBid() < dc[PREV-1][LOW] && bar[PREV-1].getClose() < dc[PREV-1][LOW] && bar[PREV].getClose() >= dc[PREV][LOW]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.SELL);
@@ -190,13 +189,25 @@ public class don_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
-        // private double[] donchian1 = { Double.NaN }, donchian2 = { Double.NaN };
-        donchian2 = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod, 2);
-        donchian1 = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod, 1);
+        // private double[][] dc = {{Double.NaN, Double.NaN},{Double.NaN, Double.NaN}};
+        dc = transpose(indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
+                                           indicatorFilter, PREV+1, bidBar.getTime(), 0));
 
-        // private IBar bar1 = null, bar2 = null;
-        bar2 = history.getBar(instrument, period, OfferSide.BID, 2);
-        bar1 = history.getBar(instrument, period, OfferSide.BID, 1);
+        // private IBar[] bar = {null, null};
+        bar[PREV] = history.getBar(instrument, period, OfferSide.BID, 2);
+        bar[PREV-1] = history.getBar(instrument, period, OfferSide.BID, 1);
+    }
+
+    private static double[][] transpose(double[][] m) {
+        int r = m.length;
+        int c = m[0].length;
+        double [][] t = new double[c][r];
+        for (int i = 0; i < r; ++i) {
+            for (int j = 0; j < c; ++j) {
+                t[j][i] = m[i][j];
+            }
+        }
+        return t;
     }
 
     // Order processing functions

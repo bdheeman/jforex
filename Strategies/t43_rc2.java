@@ -39,7 +39,7 @@ public class t43_rc2 implements IStrategy {
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
     @Configurable("Period")
-    public Period period = Period.TEN_MINS;
+    public Period period = Period.THIRTY_MINS;
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
@@ -58,14 +58,12 @@ public class t43_rc2 implements IStrategy {
     public double takeProfitPips = 0;
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
-    @Configurable(value="Verbose/Debug? (No)")
-    public boolean verbose = false;
 
     private IOrder order = null;
     private int counter = 0;
     private double volume = 0.001;
 
-    private final static int LOOK_BACK = 4000;
+    private final static int PREV = 1; /* N-1 */
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -171,17 +169,17 @@ public class t43_rc2 implements IStrategy {
             return;
 
         double[][] te = indicators.trendEnv(instrument, period, OfferSide.BID, teTimePeriod, teDeviation,
-                                            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
+                                            indicatorFilter, PREV+1, bidBar.getTime(), 0);
 
         // Buy/Long
-        if(Double.isNaN(te[0][LOOK_BACK-2]) && te[0][LOOK_BACK-1] > 0) {
+        if(Double.isNaN(te[0][PREV-1]) && te[0][PREV] > 0) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if(te[0][LOOK_BACK-2] > 0 && Double.isNaN(te[0][LOOK_BACK-1])) {
+        if(te[0][PREV-1] > 0 && Double.isNaN(te[0][PREV])) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.SELL);

@@ -66,16 +66,14 @@ public class dma_rc2 implements IStrategy {
     public double takeProfitPips = 0;
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
-    @Configurable(value="Verbose/Debug? (No)")
-    public boolean verbose = false;
 
     private IOrder order = null;
     private int counter = 0;
     private double volume = 0.001;
 
-    private final static int HIGH = 0, LOW = 1;
-    private final static int LOOK_BACK = 4000;
     private double[] maf = {Double.NaN},  mas = {Double.NaN};
+    private final static int HIGH = 0, LOW = 1;
+    private final static int PREV = 1; /* N-1 */
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -177,18 +175,18 @@ public class dma_rc2 implements IStrategy {
             return;
 
         // Act, but after collecting needful data
-        if (Double.isNaN(maf[LOOK_BACK-2]) || Double.isNaN(mas[LOOK_BACK-2]))
+        if (Double.isNaN(maf[PREV-1]) || Double.isNaN(mas[PREV-1]))
             return;
 
         // Buy/Long
-        if (maf[LOOK_BACK-2] < mas[LOOK_BACK-2] && maf[LOOK_BACK-1] > mas[LOOK_BACK-1] && tick.getBid() > mas[LOOK_BACK-1]) {
+        if (maf[PREV-1] < mas[PREV-1] && maf[PREV] > mas[PREV] && tick.getBid() > mas[PREV]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (maf[LOOK_BACK-2] > mas[LOOK_BACK-2] && maf[LOOK_BACK-1] < mas[LOOK_BACK-1] && tick.getBid() < mas[LOOK_BACK-1]) {
+        if (maf[PREV-1] > mas[PREV-1] && maf[PREV] < mas[PREV] && tick.getBid() < mas[PREV]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(OrderCommand.SELL);
@@ -203,9 +201,9 @@ public class dma_rc2 implements IStrategy {
 
         // private double[] maf = {Double.NaN},  mas = {Double.NaN};
         maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
-                            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
+                            indicatorFilter, PREV+1, bidBar.getTime(), 0);
         mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
-                            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
+                            indicatorFilter, PREV+1, bidBar.getTime(), 0);
     }
 
     // Order processing functions
