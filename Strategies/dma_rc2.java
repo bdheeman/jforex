@@ -205,7 +205,7 @@ public class dma_rc2 implements IStrategy {
         maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
                             indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
         mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
-                            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);;
+                            indicatorFilter, LOOK_BACK, bidBar.getTime(), 0);
     }
 
     // Order processing functions

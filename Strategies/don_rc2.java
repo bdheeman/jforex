@@ -64,7 +64,7 @@ public class don_rc2 implements IStrategy {
 
     private final static int HIGH = 0, LOW = 1;
     private IBar bar1 = null, bar2 = null;
-    private double[] donchian1 = {Double.NaN},  donchian2 = {Double.NaN};
+    private double[] donchian1 = {Double.NaN}, donchian2 = {Double.NaN};
 
     @Override
     public void onStart(IContext context) throws JFException {
