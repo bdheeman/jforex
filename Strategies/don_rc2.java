@@ -47,12 +47,16 @@ public class don_rc2 implements IStrategy {
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
+    @Configurable(value="Breakeven (pips)", stepSize=0.5)
+    public double breakevenPips = dcTimePeriod * 0.0; /* 50% */
     @Configurable(value="Slippage (pips)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
     public double stopLossPips = 0;
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
     public double takeProfitPips = 0;
+    @Configurable(value="Threshold (pips)", stepSize=0.5)
+    public double thresholdPips = dcTimePeriod * 0.8; /* 80% */
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
 
@@ -168,6 +172,11 @@ public class don_rc2 implements IStrategy {
         if (bar[PREV-1] == null || bar[PREV] == null)
             return;
 
+        // Is it consolidation, eh
+        if (priceToPips(dc[PREV-1][HIGH] - dc[PREV-1][LOW]) < thresholdPips) {
+            return;
+        }
+
         // Buy/Long
         if (tick.getBid() > dc[PREV-1][HIGH] && bar[PREV-1].getClose() > dc[PREV-1][HIGH] && bar[PREV].getClose() <= dc[PREV][HIGH]) {
             if (order == null || !order.isLong()) {
@@ -196,6 +205,14 @@ public class don_rc2 implements IStrategy {
         // private IBar[] bar = {null, null};
         bar[PREV] = history.getBar(instrument, period, OfferSide.BID, 2);
         bar[PREV-1] = history.getBar(instrument, period, OfferSide.BID, 1);
+
+        // Set trailing stoploss, huh
+        if (breakevenPips > 0 && isActive(order) && order.getProfitLossInPips() > breakevenPips) {
+            if (order.isLong())
+                order.setStopLossPrice(dc[PREV-1][LOW] + getPipPrice(breakevenPips), OfferSide.BID);
+            else
+                order.setStopLossPrice(dc[PREV-1][HIGH] - getPipPrice(breakevenPips), OfferSide.ASK);
+        }
     }
 
     private static double[][] transpose(double[][] m) {
@@ -266,5 +283,9 @@ public class don_rc2 implements IStrategy {
 
     protected double getPipPrice(double pips) {
         return pips * instrument.getPipValue();
+    }
+
+    protected double priceToPips(double price) {
+        return price * Math.pow(10, instrument.getPipScale());
     }
 }

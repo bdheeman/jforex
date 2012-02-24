@@ -45,19 +45,19 @@ public class t44_rc2 implements IStrategy {
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("Bars On Sides")
     public int barsOnSides = 10;
-    //@Configurable(value="Breakeven (pips)", stepSize=0.5)
-    public double breakevenPips = 10;
-    //@Configurable(value="Threshold (pips)", stepSize=0.5)
-    public double thresholdPips = 28;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
+    @Configurable(value="Breakeven (pips)", stepSize=0.5)
+    public double breakevenPips = barsOnSides * 0.0; /* 80% */
     @Configurable(value="Slippage (pips)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
     public double stopLossPips = 0;
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
     public double takeProfitPips = 0;
+    @Configurable(value="Threshold (pips)", stepSize=0.5)
+    public double thresholdPips = barsOnSides * 1.6; /* 160% */
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
 
@@ -171,18 +171,6 @@ public class t44_rc2 implements IStrategy {
         if (bidBar1 == null || askBar1 == null)
             return;
 
-        // Profits should not turn into losses, huh
-        if (isActive(order) && order.isLong() && order.getProfitLossInPips() > breakevenPips) {
-            if (bidBar1.getLow() >= bidFL[1] && tick.getBid() < bidFL[0]) {
-                closeOrder(order);
-            }
-        }
-        if (isActive(order) && !order.isLong() && order.getProfitLossInPips() > breakevenPips) {
-            if (askBar1.getHigh() <= askFL[1] && tick.getAsk() > askFL[0]) {
-                closeOrder(order);
-            }
-        }
-
         // Is it consolidation, eh
         if (priceToPips(askFL[0] - bidFL[0]) < thresholdPips) {
             return;
@@ -228,6 +216,14 @@ public class t44_rc2 implements IStrategy {
         // private IBar askBar1 = null, bidBar1 = null;
         askBar1 = history.getBar(instrument, period, OfferSide.ASK, 1);
         bidBar1 = history.getBar(instrument, period, OfferSide.BID, 1);
+
+        // Set trailing stoploss, huh
+        if (breakevenPips > 0 && isActive(order) && order.getProfitLossInPips() > breakevenPips) {
+            if (order.isLong())
+                order.setStopLossPrice(bidFL[0] + getPipPrice(breakevenPips), OfferSide.BID);
+            else
+                order.setStopLossPrice(askFL[0] - getPipPrice(breakevenPips), OfferSide.ASK);
+        }
     }
 
     // Order processing functions
