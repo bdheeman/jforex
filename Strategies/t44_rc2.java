@@ -43,8 +43,12 @@ public class t44_rc2 implements IStrategy {
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
+    //@Configurable("Candles Before")
+    public int numberOfCandlesBefore = 2;
+    //@Configurable("Candles After")
+    public int numberOfCandlesAfter = 0;
     @Configurable("Bars On Sides")
-    public int barsOnSides = 10;
+    public int barsOnSides = 12;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
@@ -172,7 +176,7 @@ public class t44_rc2 implements IStrategy {
             return;
 
         // Is it consolidation, eh
-        if (priceToPips(askFL[0] - bidFL[0]) < thresholdPips) {
+        if (priceToPips(instrument, askFL[0] - bidFL[0]) < thresholdPips) {
             return;
         }
 
@@ -180,14 +184,14 @@ public class t44_rc2 implements IStrategy {
         if (askBar1.getHigh() <= askFL[1] && tick.getAsk() > askFL[0]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.BUY);
+                order = submitOrder(instrument, OrderCommand.BUY);
             }
         }
         // Sell/Short
         if (bidBar1.getLow() >= bidFL[1] && tick.getBid() < bidFL[0]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.SELL);
+                order = submitOrder(instrument, OrderCommand.SELL);
             }
         }
     }
@@ -197,15 +201,15 @@ public class t44_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
-        Object[] askFact0 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
-        Object[] askFact1 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.ASK }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
+        Object[] askFact0 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.ASK },
+                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
+        Object[] askFact1 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.ASK },
+                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
 
-        Object[] bidFact0 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
-        Object[] bidFact1 = indicators.calculateIndicator(instrument, period,
-                            new OfferSide[] { OfferSide.BID }, "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
+        Object[] bidFact0 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.BID },
+                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
+        Object[] bidFact1 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.BID },
+                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
 
         // private double[] askFL = {Double.NaN, Double.NaN}, bidFL = {Double.NaN, Double.NaN};
         askFL[0] = (Double) askFact0[0];
@@ -220,14 +224,14 @@ public class t44_rc2 implements IStrategy {
         // Set trailing stoploss, huh
         if (breakevenPips > 0 && isActive(order) && order.getProfitLossInPips() > breakevenPips) {
             if (order.isLong())
-                order.setStopLossPrice(bidFL[0] + getPipPrice(breakevenPips), OfferSide.BID);
+                order.setStopLossPrice(bidFL[0] + getPipPrice(instrument, breakevenPips), OfferSide.BID);
             else
-                order.setStopLossPrice(askFL[0] - getPipPrice(breakevenPips), OfferSide.ASK);
+                order.setStopLossPrice(askFL[0] - getPipPrice(instrument, breakevenPips), OfferSide.ASK);
         }
     }
 
     // Order processing functions
-    private IOrder submitOrder(OrderCommand orderCommand) throws JFException {
+    private IOrder submitOrder(Instrument instrument, OrderCommand orderCommand) throws JFException {
         double stopLossPrice = 0.0, takeProfitPrice = 0.0;
         double bidPrice = history.getLastTick(instrument).getBid();
         double askPrice = history.getLastTick(instrument).getAsk();
@@ -236,18 +240,18 @@ public class t44_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = bidPrice - getPipPrice(stopLossPips);
+                stopLossPrice = bidPrice - getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = bidPrice + getPipPrice(takeProfitPips);
+                takeProfitPrice = bidPrice + getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = askPrice + getPipPrice(stopLossPips);
+                stopLossPrice = askPrice + getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = askPrice - getPipPrice(takeProfitPips);
+                takeProfitPrice = askPrice - getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -280,11 +284,11 @@ public class t44_rc2 implements IStrategy {
         return id + String.format("%10d", ++counter).replace(" ", "0");
     }
 
-    protected double getPipPrice(double pips) {
+    protected double getPipPrice(Instrument instrument, double pips) {
         return pips * instrument.getPipValue();
     }
 
-    protected double priceToPips(double price) {
+    protected double priceToPips(Instrument instrument, double price) {
         return price * Math.pow(10, instrument.getPipScale());
     }
 }

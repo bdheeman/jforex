@@ -40,8 +40,12 @@ public class don_rc2 implements IStrategy {
     @Configurable("Period")
     public Period period = Period.TEN_MINS;
 
-    //@Configurable("Indicator Filter")
+    @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
+    //@Configurable("Candles Before")
+    public int numberOfCandlesBefore = 2;
+    //@Configurable("Candles After")
+    public int numberOfCandlesAfter = 0;
     @Configurable("DC Time period")
     public int dcTimePeriod = 20;
 
@@ -66,8 +70,8 @@ public class don_rc2 implements IStrategy {
 
     private IBar[] bar = {null, null};
     private double[][] dc = {{Double.NaN, Double.NaN},{Double.NaN, Double.NaN}};
-    private final static int HIGH = 0, LOW = 1;
-    private final static int PREV = 1; /* N-1 */
+    private final static int UPPER = 0, LOWER = 1;
+    private final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -173,22 +177,22 @@ public class don_rc2 implements IStrategy {
             return;
 
         // Is it consolidation, eh
-        if (priceToPips(dc[PREV-1][HIGH] - dc[PREV-1][LOW]) < thresholdPips) {
+        if (priceToPips(instrument, dc[PREV-1][UPPER] - dc[PREV-1][LOWER]) < thresholdPips) {
             return;
         }
 
         // Buy/Long
-        if (tick.getBid() > dc[PREV-1][HIGH] && bar[PREV-1].getClose() > dc[PREV-1][HIGH] && bar[PREV].getClose() <= dc[PREV][HIGH]) {
+        if (tick.getBid() > dc[PREV-1][UPPER] && bar[PREV-1].getClose() > dc[PREV-1][UPPER] && bar[PREV].getClose() <= dc[PREV][UPPER]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.BUY);
+                order = submitOrder(instrument, OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (tick.getBid() < dc[PREV-1][LOW] && bar[PREV-1].getClose() < dc[PREV-1][LOW] && bar[PREV].getClose() >= dc[PREV][LOW]) {
+        if (tick.getBid() < dc[PREV-1][LOWER] && bar[PREV-1].getClose() < dc[PREV-1][LOWER] && bar[PREV].getClose() >= dc[PREV][LOWER]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.SELL);
+                order = submitOrder(instrument, OrderCommand.SELL);
             }
         }
     }
@@ -198,20 +202,20 @@ public class don_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
-        // private double[][] dc = {{Double.NaN, Double.NaN},{Double.NaN, Double.NaN}};
-        dc = transpose(indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
-                                           indicatorFilter, PREV+1, bidBar.getTime(), 0));
-
         // private IBar[] bar = {null, null};
         bar[PREV] = history.getBar(instrument, period, OfferSide.BID, 2);
         bar[PREV-1] = history.getBar(instrument, period, OfferSide.BID, 1);
 
+        // private double[][] dc = {{Double.NaN, Double.NaN},{Double.NaN, Double.NaN}};
+        dc = transpose(indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
+                                   indicatorFilter, numberOfCandlesBefore, bar[PREV-1].getTime(), numberOfCandlesAfter));
+
         // Set trailing stoploss, huh
         if (breakevenPips > 0 && isActive(order) && order.getProfitLossInPips() > breakevenPips) {
             if (order.isLong())
-                order.setStopLossPrice(dc[PREV-1][LOW] + getPipPrice(breakevenPips), OfferSide.BID);
+                order.setStopLossPrice(dc[PREV-1][LOWER] + getPipPrice(instrument, breakevenPips), OfferSide.BID);
             else
-                order.setStopLossPrice(dc[PREV-1][HIGH] - getPipPrice(breakevenPips), OfferSide.ASK);
+                order.setStopLossPrice(dc[PREV-1][UPPER] - getPipPrice(instrument, breakevenPips), OfferSide.ASK);
         }
     }
 
@@ -228,7 +232,7 @@ public class don_rc2 implements IStrategy {
     }
 
     // Order processing functions
-    private IOrder submitOrder(OrderCommand orderCommand) throws JFException {
+    private IOrder submitOrder(Instrument instrument, OrderCommand orderCommand) throws JFException {
         double stopLossPrice = 0.0, takeProfitPrice = 0.0;
         double bidPrice = history.getLastTick(instrument).getBid();
         double askPrice = history.getLastTick(instrument).getAsk();
@@ -237,18 +241,18 @@ public class don_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = bidPrice - getPipPrice(stopLossPips);
+                stopLossPrice = bidPrice - getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = bidPrice + getPipPrice(takeProfitPips);
+                takeProfitPrice = bidPrice + getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = askPrice + getPipPrice(stopLossPips);
+                stopLossPrice = askPrice + getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = askPrice - getPipPrice(takeProfitPips);
+                takeProfitPrice = askPrice - getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -281,11 +285,11 @@ public class don_rc2 implements IStrategy {
         return id + String.format("%10d", ++counter).replace(" ", "0");
     }
 
-    protected double getPipPrice(double pips) {
-        return pips * instrument.getPipValue();
+    protected double getPipPrice(Instrument instrument, double pips) {
+        return instrument.getPipValue() * pips;
     }
 
-    protected double priceToPips(double price) {
+    protected double priceToPips(Instrument instrument, double price) {
         return price * Math.pow(10, instrument.getPipScale());
     }
 }

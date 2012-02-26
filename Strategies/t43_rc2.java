@@ -43,6 +43,10 @@ public class t43_rc2 implements IStrategy {
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
+    //@Configurable("Candles Before")
+    public int numberOfCandlesBefore = 2;
+    //@Configurable("Candles After")
+    public int numberOfCandlesAfter = 0;
     @Configurable(value="TE Time Period", stepSize=1)
     public int teTimePeriod = 14;
     @Configurable(value="TE Deviation", stepSize=0.01)
@@ -63,7 +67,7 @@ public class t43_rc2 implements IStrategy {
     private int counter = 0;
     private double volume = 0.001;
 
-    private final static int PREV = 1; /* N-1 */
+    private final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -168,27 +172,28 @@ public class t43_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
+        IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
         double[][] te = indicators.trendEnv(instrument, period, OfferSide.BID, teTimePeriod, teDeviation,
-                                            indicatorFilter, PREV+1, bidBar.getTime(), 0);
+                                   indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         // Buy/Long
         if(Double.isNaN(te[0][PREV-1]) && te[0][PREV] > 0) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.BUY);
+                order = submitOrder(instrument, OrderCommand.BUY);
             }
         }
         // Sell/Short
         if(te[0][PREV-1] > 0 && Double.isNaN(te[0][PREV])) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.SELL);
+                order = submitOrder(instrument, OrderCommand.SELL);
             }
         }
     }
 
     // Order processing functions
-    private IOrder submitOrder(OrderCommand orderCommand) throws JFException {
+    private IOrder submitOrder(Instrument instrument, OrderCommand orderCommand) throws JFException {
         double stopLossPrice = 0.0, takeProfitPrice = 0.0;
         double bidPrice = history.getLastTick(instrument).getBid();
         double askPrice = history.getLastTick(instrument).getAsk();
@@ -197,18 +202,18 @@ public class t43_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = bidPrice - getPipPrice(stopLossPips);
+                stopLossPrice = bidPrice - getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = bidPrice + getPipPrice(takeProfitPips);
+                takeProfitPrice = bidPrice + getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = askPrice + getPipPrice(stopLossPips);
+                stopLossPrice = askPrice + getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = askPrice - getPipPrice(takeProfitPips);
+                takeProfitPrice = askPrice - getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -241,7 +246,7 @@ public class t43_rc2 implements IStrategy {
         return id + String.format("%10d", ++counter).replace(" ", "0");
     }
 
-    protected double getPipPrice(double pips) {
+    protected double getPipPrice(Instrument instrument, double pips) {
         return pips * instrument.getPipValue();
     }
 }

@@ -43,6 +43,10 @@ public class dma_rc2 implements IStrategy {
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
+    //@Configurable("Candles Before")
+    public int numberOfCandlesBefore = 2;
+    //@Configurable("Candles After")
+    public int numberOfCandlesAfter = 0;
     //@Configurable("MA Applied Price (Fast)")
     public AppliedPrice appliedPriceFast = AppliedPrice.CLOSE;
     @Configurable("MA Time Period (Fast)")
@@ -72,8 +76,7 @@ public class dma_rc2 implements IStrategy {
     private double volume = 0.001;
 
     private double[] maf = {Double.NaN},  mas = {Double.NaN};
-    private final static int HIGH = 0, LOW = 1;
-    private final static int PREV = 1; /* N-1 */
+    private final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -182,14 +185,14 @@ public class dma_rc2 implements IStrategy {
         if (maf[PREV-1] < mas[PREV-1] && maf[PREV] > mas[PREV] && tick.getBid() > mas[PREV]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.BUY);
+                order = submitOrder(instrument, OrderCommand.BUY);
             }
         }
         // Sell/Short
         if (maf[PREV-1] > mas[PREV-1] && maf[PREV] < mas[PREV] && tick.getBid() < mas[PREV]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(OrderCommand.SELL);
+                order = submitOrder(instrument, OrderCommand.SELL);
             }
         }
     }
@@ -199,15 +202,17 @@ public class dma_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
+        IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
+
         // private double[] maf = {Double.NaN},  mas = {Double.NaN};
         maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
-                            indicatorFilter, PREV+1, bidBar.getTime(), 0);
+                                   indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
         mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, timePeriodSlow, maTypeSlow,
-                            indicatorFilter, PREV+1, bidBar.getTime(), 0);
+                                   indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
     }
 
     // Order processing functions
-    private IOrder submitOrder(OrderCommand orderCommand) throws JFException {
+    private IOrder submitOrder(Instrument instrument, OrderCommand orderCommand) throws JFException {
         double stopLossPrice = 0.0, takeProfitPrice = 0.0;
         double bidPrice = history.getLastTick(instrument).getBid();
         double askPrice = history.getLastTick(instrument).getAsk();
@@ -216,18 +221,18 @@ public class dma_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = bidPrice - getPipPrice(stopLossPips);
+                stopLossPrice = bidPrice - getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = bidPrice + getPipPrice(takeProfitPips);
+                takeProfitPrice = bidPrice + getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = askPrice + getPipPrice(stopLossPips);
+                stopLossPrice = askPrice + getPipPrice(instrument, stopLossPips);
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = askPrice - getPipPrice(takeProfitPips);
+                takeProfitPrice = askPrice - getPipPrice(instrument, takeProfitPips);
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -260,7 +265,7 @@ public class dma_rc2 implements IStrategy {
         return id + String.format("%10d", ++counter).replace(" ", "0");
     }
 
-    protected double getPipPrice(double pips) {
-        return pips * instrument.getPipValue();
+    protected double getPipPrice(Instrument instrument, double pips) {
+        return instrument.getPipValue() * pips;
     }
 }

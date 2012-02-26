@@ -46,6 +46,10 @@ public class t42_rc2 implements IStrategy {
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
+    //@Configurable("Candles Before")
+    public int numberOfCandlesBefore = 2;
+    //@Configurable("Candles After")
+    public int numberOfCandlesAfter = 0;
     @Configurable(value="DC Period", stepSize=1)
     public int dcTimePeriod = 22;
     //@Configurable("MA Applied Price (Fast)")
@@ -60,10 +64,6 @@ public class t42_rc2 implements IStrategy {
     public int maTimePeriodSlow = 40;
     @Configurable("MA Type (Slow)")
     public MaType maTypeSlow = MaType.T3;
-    //@Configurable("Candles Before")
-    public int numberOfCandlesBefore = 2;
-    //@Configurable("Candles After")
-    public int numberOfCandlesAfter = 0;
 
     @Configurable(value="Risk Factor (Percent)", stepSize=0.01)
     public double riskPercent = 0.21;
@@ -86,6 +86,10 @@ public class t42_rc2 implements IStrategy {
 
     private double bidPrice, askPrice;
     private ITick lastTick;
+
+    private final static int OPEN = 0, HIGH = 2, LOW = 3, CLOSE = 1; /* DEMO /*
+    //private final static int OPEN = 0, HIGH = 3, LOW = 2, CLOSE = 1; /* LIVE */
+    private final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -218,13 +222,9 @@ public class t42_rc2 implements IStrategy {
 
         IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
         double[][] ha = indicators.heikinAshi(instrument, period, OfferSide.BID,
-                                              indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                   indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
-        final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
-        final int OPEN = 0, HIGH = 2, LOW = 3, CLOSE = 1; /* DEMO */
-        //final int OPEN = 0, HIGH = 3, LOW = 2, CLOSE = 1; /* LIVE */
-
-        double average = priceToPips(((ha[PREV][HIGH] - ha[PREV][LOW]) + (ha[PREV-1][HIGH] - ha[PREV-1][LOW])) / 2.0);
+        double average = priceToPips(instrument, ((ha[PREV][HIGH] - ha[PREV][LOW]) + (ha[PREV-1][HIGH] - ha[PREV-1][LOW])) / 2.0);
         double spread = askPrice - bidPrice;
 
         stopLossPips = roundPips(stopLossFactor * average);
@@ -241,14 +241,14 @@ public class t42_rc2 implements IStrategy {
 
         // Major indicators
         double[][] dc = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
-                                            indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                   indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         final int UPPER = 0, LOWER = 1;
 
         double[] maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, maTimePeriodFast, maTypeFast,
-                                     indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                   indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
         double[] mas = indicators.ma(instrument, period, OfferSide.BID, appliedPriceSlow, maTimePeriodSlow, maTypeSlow,
-                                     indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
+                                   indicatorFilter, numberOfCandlesBefore, prevBar.getTime(), numberOfCandlesAfter);
 
         // Take care, your profits should not turn into losses
         if (askPrice < maf[PREV]) {
@@ -297,8 +297,8 @@ public class t42_rc2 implements IStrategy {
 
         // BUY on lower lows
         if (longOk && bidPrice + spread < dc[LOWER][PREV] && dc[LOWER][PREV] < dc[LOWER][PREV-1]) {
-            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = askPrice - getPipPrice(stopLossPips) : 0;
-            double takeProfitPrice = askPrice + getPipPrice(takeProfitPips);
+            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = askPrice - getPipPrice(instrument, stopLossPips) : 0;
+            double takeProfitPrice = askPrice + getPipPrice(instrument, takeProfitPips);
 
             console.getOut().printf("%s <TWEET> BUY #%s @%.5f VOL %.4f SL %.5f TP %.5f\n", getLabel(instrument), instrument.name(), askPrice, volume, stopLossPrice, takeProfitPrice);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.BUY, volume, askPrice, slippage,
@@ -306,8 +306,8 @@ public class t42_rc2 implements IStrategy {
         }
         // SELL on higher highs
         if (shortOk && askPrice > dc[UPPER][PREV] && dc[UPPER][PREV] > dc[UPPER][PREV-1]) {
-            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = bidPrice + getPipPrice(stopLossPips) : 0;
-            double takeProfitPrice = bidPrice - getPipPrice(takeProfitPips);
+            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = bidPrice + getPipPrice(instrument, stopLossPips) : 0;
+            double takeProfitPrice = bidPrice - getPipPrice(instrument, takeProfitPips);
 
             console.getOut().printf("%s <TWEET> SELL #%s @%.5f VOL %.4f SL %.5f TP %.5f\n", getLabel(instrument), instrument.name(), bidPrice, volume, stopLossPrice, takeProfitPrice);
             IOrder order = engine.submitOrder(getLabel(instrument), instrument, OrderCommand.SELL, volume, bidPrice, slippage,
@@ -331,12 +331,12 @@ public class t42_rc2 implements IStrategy {
         return lotSize - lotSize % 0.001 + 0.001;
     }
 
-    protected double getPipPrice(double pips) throws JFException {
+    protected double getPipPrice(Instrument instrument, double pips) throws JFException {
         double pipPrice = pips * instrument.getPipValue();
         return pipPrice - pipPrice % Math.pow(10, instrument.getPipScale() * -1);
     }
 
-    protected double priceToPips(double price) {
+    protected double priceToPips(Instrument instrument, double price) {
         return price * Math.pow(10, instrument.getPipScale());
     }
 
