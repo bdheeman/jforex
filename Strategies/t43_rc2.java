@@ -17,8 +17,6 @@
 //
 package jforex.strategies.bdheeman;
 
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
@@ -39,7 +37,7 @@ public class t43_rc2 implements IStrategy {
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
     @Configurable("Period")
-    public Period period = Period.THIRTY_MINS;
+    public Period period = Period.TEN_MINS;
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
@@ -48,7 +46,7 @@ public class t43_rc2 implements IStrategy {
     //@Configurable("Candles After")
     public int numberOfCandlesAfter = 0;
     @Configurable(value="TE Time Period", stepSize=1)
-    public int teTimePeriod = 14;
+    public int teTimePeriod = 4;
     @Configurable(value="TE Deviation", stepSize=0.01)
     public double teDeviation = 0.1;
 
@@ -202,18 +200,18 @@ public class t43_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = bidPrice - getPipPrice(instrument, stopLossPips);
+                stopLossPrice = roundPrice(bidPrice - getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = bidPrice + getPipPrice(instrument, takeProfitPips);
+                takeProfitPrice = roundPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = askPrice + getPipPrice(instrument, stopLossPips);
+                stopLossPrice = roundPrice(askPrice + getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = askPrice - getPipPrice(instrument, takeProfitPips);
+                takeProfitPrice = roundPrice(askPrice - getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -248,5 +246,9 @@ public class t43_rc2 implements IStrategy {
 
     protected double getPipPrice(Instrument instrument, double pips) {
         return pips * instrument.getPipValue();
+    }
+
+    protected double roundPrice(double price) {
+        return price - price % Math.pow(10, (instrument.getPipScale()+1) * -1);
     }
 }

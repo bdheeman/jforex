@@ -17,8 +17,6 @@
 //
 package jforex.strategies.bdheeman;
 
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
@@ -177,19 +175,19 @@ public class don_rc2 implements IStrategy {
             return;
 
         // Is it consolidation, eh
-        if (priceToPips(instrument, dc[PREV-1][UPPER] - dc[PREV-1][LOWER]) < thresholdPips) {
+        if (priceToPips(instrument, dc[UPPER][PREV-1] - dc[LOWER][PREV-1]) < thresholdPips) {
             return;
         }
 
         // Buy/Long
-        if (tick.getBid() > dc[PREV-1][UPPER] && bar[PREV-1].getClose() > dc[PREV-1][UPPER] && bar[PREV].getClose() <= dc[PREV][UPPER]) {
+        if (tick.getBid() > dc[UPPER][PREV-1] && bar[PREV-1].getClose() > dc[UPPER][PREV-1] && bar[PREV].getClose() <= dc[UPPER][PREV]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(instrument, OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (tick.getBid() < dc[PREV-1][LOWER] && bar[PREV-1].getClose() < dc[PREV-1][LOWER] && bar[PREV].getClose() >= dc[PREV][LOWER]) {
+        if (tick.getBid() < dc[LOWER][PREV-1] && bar[PREV-1].getClose() < dc[LOWER][PREV-1] && bar[PREV].getClose() >= dc[LOWER][PREV]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(instrument, OrderCommand.SELL);
@@ -207,28 +205,16 @@ public class don_rc2 implements IStrategy {
         bar[PREV-1] = history.getBar(instrument, period, OfferSide.BID, 1);
 
         // private double[][] dc = {{Double.NaN, Double.NaN},{Double.NaN, Double.NaN}};
-        dc = transpose(indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
-                                   indicatorFilter, numberOfCandlesBefore, bar[PREV-1].getTime(), numberOfCandlesAfter));
+        dc = indicators.donchian(instrument, period, OfferSide.BID, dcTimePeriod,
+                                   indicatorFilter, numberOfCandlesBefore, bar[PREV-1].getTime(), numberOfCandlesAfter);
 
         // Set trailing stoploss, huh
         if (breakevenPips > 0 && isActive(order) && order.getProfitLossInPips() > breakevenPips) {
             if (order.isLong())
-                order.setStopLossPrice(dc[PREV-1][LOWER] + getPipPrice(instrument, breakevenPips), OfferSide.BID);
+                order.setStopLossPrice(dc[LOWER][PREV-1] + getPipPrice(instrument, breakevenPips), OfferSide.BID);
             else
-                order.setStopLossPrice(dc[PREV-1][UPPER] - getPipPrice(instrument, breakevenPips), OfferSide.ASK);
+                order.setStopLossPrice(dc[UPPER][PREV-1] - getPipPrice(instrument, breakevenPips), OfferSide.ASK);
         }
-    }
-
-    private static double[][] transpose(double[][] m) {
-        int r = m.length;
-        int c = m[0].length;
-        double [][] t = new double[c][r];
-        for (int i = 0; i < r; ++i) {
-            for (int j = 0; j < c; ++j) {
-                t[j][i] = m[i][j];
-            }
-        }
-        return t;
     }
 
     // Order processing functions
@@ -241,18 +227,18 @@ public class don_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = bidPrice - getPipPrice(instrument, stopLossPips);
+                stopLossPrice = roundPrice(bidPrice - getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = bidPrice + getPipPrice(instrument, takeProfitPips);
+                takeProfitPrice = roundPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = askPrice + getPipPrice(instrument, stopLossPips);
+                stopLossPrice = roundPrice(askPrice + getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = askPrice - getPipPrice(instrument, takeProfitPips);
+                takeProfitPrice = roundPrice(askPrice - getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -291,5 +277,9 @@ public class don_rc2 implements IStrategy {
 
     protected double priceToPips(Instrument instrument, double price) {
         return price * Math.pow(10, instrument.getPipScale());
+    }
+
+    protected double roundPrice(double price) {
+        return price - price % Math.pow(10, (instrument.getPipScale()+1) * -1);
     }
 }

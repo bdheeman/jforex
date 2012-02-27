@@ -17,8 +17,6 @@
 //
 package jforex.strategies.bdheeman;
 
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
@@ -221,18 +219,18 @@ public class dma_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = bidPrice - getPipPrice(instrument, stopLossPips);
+                stopLossPrice = roundPrice(bidPrice - getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = bidPrice + getPipPrice(instrument, takeProfitPips);
+                takeProfitPrice = roundPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = askPrice + getPipPrice(instrument, stopLossPips);
+                stopLossPrice = roundPrice(askPrice + getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = askPrice - getPipPrice(instrument, takeProfitPips);
+                takeProfitPrice = roundPrice(askPrice - getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -267,5 +265,9 @@ public class dma_rc2 implements IStrategy {
 
     protected double getPipPrice(Instrument instrument, double pips) {
         return instrument.getPipValue() * pips;
+    }
+
+    protected double roundPrice(double price) {
+        return price - price % Math.pow(10, (instrument.getPipScale()+1) * -1);
     }
 }

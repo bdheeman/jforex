@@ -297,7 +297,7 @@ public class t42_rc2 implements IStrategy {
 
         // BUY on lower lows
         if (longOk && bidPrice + spread < dc[LOWER][PREV] && dc[LOWER][PREV] < dc[LOWER][PREV-1]) {
-            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = askPrice - getPipPrice(instrument, stopLossPips) : 0;
+            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = roundPrice(askPrice - getPipPrice(instrument, stopLossPips)) : 0;
             double takeProfitPrice = askPrice + getPipPrice(instrument, takeProfitPips);
 
             console.getOut().printf("%s <TWEET> BUY #%s @%.5f VOL %.4f SL %.5f TP %.5f\n", getLabel(instrument), instrument.name(), askPrice, volume, stopLossPrice, takeProfitPrice);
@@ -306,7 +306,7 @@ public class t42_rc2 implements IStrategy {
         }
         // SELL on higher highs
         if (shortOk && askPrice > dc[UPPER][PREV] && dc[UPPER][PREV] > dc[UPPER][PREV-1]) {
-            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = bidPrice + getPipPrice(instrument, stopLossPips) : 0;
+            double stopLossPrice = stopLossPips > 0 ? stopLossPrice = roundPrice(bidPrice + getPipPrice(instrument, stopLossPips)) : 0;
             double takeProfitPrice = bidPrice - getPipPrice(instrument, takeProfitPips);
 
             console.getOut().printf("%s <TWEET> SELL #%s @%.5f VOL %.4f SL %.5f TP %.5f\n", getLabel(instrument), instrument.name(), bidPrice, volume, stopLossPrice, takeProfitPrice);
@@ -342,6 +342,10 @@ public class t42_rc2 implements IStrategy {
 
     protected double roundPips(double pips) throws JFException {
         return pips - pips % 0.5 + 0.5;
+    }
+
+    protected double roundPrice(double price) {
+        return price - price % Math.pow(10, (instrument.getPipScale()+1) * -1);
     }
 
     protected long roundTime(long time, long milliseconds) throws JFException {
