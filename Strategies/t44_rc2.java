@@ -81,7 +81,7 @@ public class t44_rc2 implements IStrategy {
         // Add indicators for visual testing
         IChart chart = context.getChart(instrument);
         if (chart != null && engine.getType() == IEngine.Type.TEST) {
-            chart.addIndicator(indicators.getIndicator("FractalLines"), new Object[] {barsOnSides});
+            chart.addIndicator(indicators.getIndicator("FChannels"), new Object[] {barsOnSides});
         }
 
         // Recall existing; last position, if any
@@ -196,14 +196,14 @@ public class t44_rc2 implements IStrategy {
             return;
 
         Object[] askFact0 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.ASK },
-                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
+                            "FChannels", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
         Object[] askFact1 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.ASK },
-                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
+                            "FChannels", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
 
         Object[] bidFact0 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.BID },
-                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
+                            "FChannels", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 0);
         Object[] bidFact1 = indicators.calculateIndicator(instrument, period, new OfferSide[] { OfferSide.BID },
-                            "FractalLines", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
+                            "FChannels", new AppliedPrice[] {AppliedPrice.CLOSE}, new Object[] {barsOnSides}, 1);
 
         // private double[] askFL = {Double.NaN, Double.NaN}, bidFL = {Double.NaN, Double.NaN};
         askFL[0] = (Double) askFact0[0];

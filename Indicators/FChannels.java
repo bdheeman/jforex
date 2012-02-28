@@ -31,14 +31,14 @@ import com.dukascopy.api.indicators.OutputParameterInfo;
 
 import java.awt.Color;
 
-public class FractalLines implements IIndicator {
+public class FChannels implements IIndicator {
     private IndicatorInfo indicatorInfo;
     private InputParameterInfo[] inputParameterInfos;
     private OptInputParameterInfo[] optInputParameterInfos;
     private OutputParameterInfo[] outputParameterInfos;
 
-    public static final Color LIGHT_GREEN = new Color(0x80, 0xEE, 0x80);
-    public static final Color LIGHT_RED  = new Color(0xFF, 0x80, 0x80);
+    public static final Color DARK_GREEN = new Color(0x00, 0x66, 0x00);
+    public static final Color DARK_RED = new Color(0xC0, 0x00, 0x00);
 
     private IIndicator FractalIndicator;
     private double[][][] inputs = new double[1][][];
@@ -50,7 +50,7 @@ public class FractalLines implements IIndicator {
     public void onStart(IIndicatorContext context) {
         FractalIndicator = context.getIndicatorsProvider().getIndicator("FRACTAL");
 
-        indicatorInfo = new IndicatorInfo("FRACTALLINES", "Fractal Lines Indicator", "Overlap Studies", true, false, true, 1, 1, 2);
+        indicatorInfo = new IndicatorInfo("FCHANNELS", "Fractal Channels", "Overlap Studies", true, false, true, 1, 1, 2);
 
         inputParameterInfos = new InputParameterInfo[] {
             new InputParameterInfo("Price", InputParameterInfo.Type.PRICE)
@@ -62,11 +62,11 @@ public class FractalLines implements IIndicator {
 
         outputParameterInfos = new OutputParameterInfo[] {
         new OutputParameterInfo("Maximums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_GREEN);
+                setColor(DARK_GREEN);
             }
         },
         new OutputParameterInfo("Minimums", OutputParameterInfo.Type.DOUBLE, OutputParameterInfo.DrawingStyle.LINE) {{
-                setColor(LIGHT_RED);
+                setColor(DARK_RED);
             }
         }
         };
