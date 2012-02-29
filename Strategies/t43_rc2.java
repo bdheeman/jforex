@@ -241,7 +241,7 @@ public class t43_rc2 implements IStrategy {
     }
 
     protected String getLabel(Instrument instrument) {
-        return id + String.format("%10d", ++counter).replace(" ", "0");
+        return id + instrument.name().substring(0, 2) + instrument.name().substring(3, 5) + String.format("%8d", ++counter).replace(" ", "0");
     }
 
     protected double getPipPrice(Instrument instrument, double pips) {
@@ -249,6 +249,6 @@ public class t43_rc2 implements IStrategy {
     }
 
     protected double roundPrice(double price) {
-        return price - price % Math.pow(10, (instrument.getPipScale()+1) * -1);
+        return price - price % Math.pow(10, (this.instrument.getPipScale() + 1) * -1);
     }
 }
