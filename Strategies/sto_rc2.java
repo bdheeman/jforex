@@ -43,7 +43,7 @@ public class sto_rc2 implements IStrategy {
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
     @Configurable("Time Frame")
-    public Period period = Period.ONE_HOUR;;
+    public Period period = Period.ONE_HOUR;
 
     @Configurable("Indicator Filter")
     public Filter filter = Filter.ALL_FLATS;
@@ -61,7 +61,7 @@ public class sto_rc2 implements IStrategy {
     public int slowDPeriod = 5;
     @Configurable("STOCH D MA Type")
     public MaType slowDMaType = MaType.SMA;
-    @Configurable("STOCH Short period")
+    @Configurable(value="STOCH Short period", readOnly=true)
     public Period shortPeriod = period;
     @Configurable("STOCH Long period")
     public Period longPeriod = Period.DAILY;
@@ -91,10 +91,11 @@ public class sto_rc2 implements IStrategy {
     private IOrder order;
     private int counter = 0;
 
+    private final static double FACTOR = 0.24;
     private double risk = riskPercent / 100;
-    private long time;
     private int hourFrom = 0, minFrom = 0;
     private int hourTo = 22, minTo = 0;
+    private long time;
 
     @Override
     public void onStart(IContext context) throws JFException {
@@ -116,6 +117,7 @@ public class sto_rc2 implements IStrategy {
         minFrom = Integer.valueOf(startAt.replaceAll("^[0-9]+[:.]", ""));
         hourTo = Integer.valueOf(stopAt.replaceAll("[:.][0-9]+$", ""));
         minTo = Integer.valueOf(stopAt.replaceAll("^[0-9]+[:.]", ""));
+        shortPeriod = period;
         risk = riskPercent / 100;
     }
 
@@ -180,7 +182,7 @@ public class sto_rc2 implements IStrategy {
 
     @Override
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-        if (period != this.shortPeriod || instrument != this.instrument) {
+        if (instrument != this.instrument || period != this.period) {
             return;
         }
 
@@ -198,11 +200,11 @@ public class sto_rc2 implements IStrategy {
         double[][] stochLong = indicators.stoch(instrument, longPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, filter, 2, askBar.getTime(), 0);
         double[][] stochShort = indicators.stoch(instrument, shortPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, filter, 2, askBar.getTime(), 0);
 
-        boolean isBuySignal = false;
-        boolean isSellSignal = false;
-
         double high = indicators.max(instrument, period, offerSide,  AppliedPrice.HIGH, swingPeriod, filter, 1, askBar.getTime(), 0)[0];
         double low = indicators.min(instrument, period, offerSide,  AppliedPrice.LOW, swingPeriod, filter, 1, askBar.getTime(), 0)[0];
+
+        boolean isBuySignal = false;
+        boolean isSellSignal = false;
 
         if (stochLong[K][0] > stochLong[D][0] && stochShort[K][0] > stochShort[D][0]
                 && stochLong[K][0] < 80 && stochLong[D][0] < 80 && stochShort[K][0] < 80 && stochShort[D][0] < 80) {
@@ -214,7 +216,7 @@ public class sto_rc2 implements IStrategy {
         }
 
 
-        // PLACE ORDER
+        // BUY
         if (isBuySignal) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
@@ -222,18 +224,20 @@ public class sto_rc2 implements IStrategy {
                 if(isRightTime(askBar.getTime(), hourFrom, minFrom, hourTo, minTo)) {
                     double stopLoss = low;
                     double minSL = bidBar.getOpen() - getPipPrice(stopLossPips);
-                    double takeProfit = getRoundedPrice(bidBar.getOpen() + (high - low) * 0.236);
+                    double takeProfit = getRoundedPrice(bidBar.getOpen() + (high - low) * FACTOR);
                     double minTP = bidBar.getOpen() + getPipPrice(takeProfitPips);
 
                     stopLoss = Math.min(stopLoss, minSL);
                     takeProfit = Math.max(takeProfit, minTP);
 
-                    order = submitOrder(OrderCommand.BUY, stopLoss, takeProfit);
+                    if (priceToPips(instrument, takeProfit - bidBar.getClose()) >= FACTOR * 10) {
+                        order = submitOrder(OrderCommand.BUY, stopLoss, takeProfit);
+                    }
                 } else {
                     order = null;
                 }
             }
-
+        // SELL
         } else if (isSellSignal) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
@@ -241,13 +245,15 @@ public class sto_rc2 implements IStrategy {
                 if(isRightTime(askBar.getTime(), hourFrom, minFrom, hourTo, minTo)) {
                     double stopLoss = high;
                     double minSL = askBar.getOpen() + getPipPrice(stopLossPips);
-                    double takeProfit = getRoundedPrice(askBar.getOpen() - (high - low) * 0.236);
+                    double takeProfit = getRoundedPrice(askBar.getOpen() - (high - low) * FACTOR);
                     double minTP = askBar.getOpen() - getPipPrice(takeProfitPips);
 
                     stopLoss = Math.max(stopLoss, minSL);
                     takeProfit = Math.min(takeProfit, minTP);
 
-                    order = submitOrder(OrderCommand.SELL, stopLoss, takeProfit);
+                    if (priceToPips(instrument, askBar.getClose() - takeProfit) >= FACTOR * 10) {
+                        order = submitOrder(OrderCommand.SELL, stopLoss, takeProfit);
+                    }
                 } else {
                     order = null;
                 }
@@ -331,5 +337,9 @@ public class sto_rc2 implements IStrategy {
         BigDecimal bd = new BigDecimal(pips);
         bd = bd.setScale(1, RoundingMode.HALF_UP);
         return bd.doubleValue();
+    }
+
+    protected double priceToPips(Instrument instrument, double price) {
+        return price * Math.pow(10, instrument.getPipScale());
     }
 }
