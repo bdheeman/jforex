@@ -41,6 +41,9 @@ import java.util.Map;
 
 public class DMA implements IIndicator, IDrawingIndicator {
     private IndicatorInfo indicatorInfo;
+    private InputParameterInfo[] inputParameterInfos;
+    private OptInputParameterInfo[] optInputParameterInfos;
+    private OutputParameterInfo[] outputParameterInfos;
 
     private int fastTimePeriod = 5;
     private int slowTimePeriod = 13;
@@ -53,10 +56,6 @@ public class DMA implements IIndicator, IDrawingIndicator {
     public static final Color VERY_LIGHT_RED = new Color(0xC8, 0x00, 0x00, 0x4E);
     public static final int FASTMA = 0;
     public static final int SLOWMA = 1;
-
-    private InputParameterInfo[] inputParameterInfos;
-    private OptInputParameterInfo[] optInputParameterInfos;
-    private OutputParameterInfo[] outputParameterInfos;
 
     private IIndicator fastMaIndi;
     private IIndicator slowMaIndi;
@@ -182,6 +181,17 @@ public class DMA implements IIndicator, IDrawingIndicator {
         return Math.max( fastMaLookBack, slowMaLookBack) ;
     }
 
+    public int getLookforward() {
+        return 0;
+    }
+
+    public OptInputParameterInfo getOptInputParameterInfo(int index) {
+        if (index <= optInputParameterInfos.length) {
+            return optInputParameterInfos[index];
+        }
+        return null;
+    }
+
     public OutputParameterInfo getOutputParameterInfo(int index) {
         if (index <= outputParameterInfos.length) {
             return outputParameterInfos[index];
@@ -191,13 +201,6 @@ public class DMA implements IIndicator, IDrawingIndicator {
 
     public void setInputParameter(int index, Object array) {
         inputs[index] = (double[]) array;
-    }
-
-    public OptInputParameterInfo getOptInputParameterInfo(int index) {
-        if (index <= optInputParameterInfos.length) {
-            return optInputParameterInfos[index];
-        }
-        return null;
     }
 
     public void setOptInputParameter(int index, Object value) {
@@ -229,10 +232,6 @@ public class DMA implements IIndicator, IDrawingIndicator {
         } else {
             output[0] = (Object[]) array;
         }
-    }
-
-    public int getLookforward() {
-        return 0;
     }
 
     public Point drawOutput(Graphics g, int outputIdx, Object values2, Color color, Stroke stroke,

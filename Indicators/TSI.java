@@ -25,15 +25,15 @@ public class TSI implements IIndicator {
     private OptInputParameterInfo[] optInputParameterInfos;
     private OutputParameterInfo[] outputParameterInfos;
     private double[][] inputs = new double[1][];
-    private int timePeriod = 2;
     private double[][] outputs = new double[1][];
+    private int timePeriod = 2;
 
     public void onStart(IIndicatorContext context) {
         indicatorInfo = new IndicatorInfo("TSI", "True Strength Index", "Momentum Indicators",
                                           false, false, false, 1, 1, 1);
         inputParameterInfos = new InputParameterInfo[] {new InputParameterInfo("Input data", InputParameterInfo.Type.DOUBLE)};
         optInputParameterInfos = new OptInputParameterInfo[] {new OptInputParameterInfo("Time period", OptInputParameterInfo.Type.OTHER,
-                    new IntegerRangeDescription(2, 2, 100, 1))
+                    new IntegerRangeDescription(timePeriod, 2, 100, 1))
         };
         outputParameterInfos = new OutputParameterInfo[] {new OutputParameterInfo("TSI", OutputParameterInfo.Type.DOUBLE,
                     OutputParameterInfo.DrawingStyle.LINE)

@@ -57,7 +57,7 @@ public class FChannels implements IIndicator {
         };
 
         optInputParameterInfos = new OptInputParameterInfo[] {
-            new OptInputParameterInfo("Number of bars on sides", OptInputParameterInfo.Type.OTHER, new IntegerRangeDescription(2, 2, 50, 1))
+            new OptInputParameterInfo("Number of bars on sides", OptInputParameterInfo.Type.OTHER, new IntegerRangeDescription(bars, 2, 50, 1))
         };
 
         outputParameterInfos = new OutputParameterInfo[] {
