@@ -41,7 +41,7 @@ public class ttt_rc2 implements IStrategy {
     @Configurable("Time Frame")
     public Period period = Period.TEN_MINS;
     @Configurable("Polling Period")
-    public Period barPeriod = Period.ONE_MIN;
+    public Period pollingPeriod = Period.ONE_MIN;
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
@@ -190,7 +190,7 @@ public class ttt_rc2 implements IStrategy {
 
     @Override
     public void onBar(Instrument instrument, Period period, IBar askBar, IBar bidBar) throws JFException {
-        if (instrument != this.instrument || period != this.barPeriod)
+        if (instrument != this.instrument || period != pollingPeriod)
             return;
 
         // private double[] ha0 = {Double.NaN,Double.NaN,Double.NaN,Double.NaN};
@@ -201,7 +201,7 @@ public class ttt_rc2 implements IStrategy {
         // private double ma0 = Double.NaN, ma1 = Double.NaN;
         ma0 = indicators.ma(instrument, this.period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast, 0);
         ma1 = indicators.ma(instrument, this.period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast, 1);
-       
+
         // Buy/Long
         if (ma0 > ma1 && ha0[CLOSE] > ha0[OPEN] && ha1[CLOSE] >= ha1[OPEN] && askBar.getClose() > ma0) {
             if (order == null || !order.isLong()) {
