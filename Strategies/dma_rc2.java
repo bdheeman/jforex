@@ -36,7 +36,7 @@ public class dma_rc2 implements IStrategy {
 
     @Configurable("Instrument")
     public Instrument instrument = Instrument.EURUSD;
-    @Configurable("Period")
+    @Configurable("Time Frame")
     public Period period = Period.TEN_MINS;
 
     @Configurable("Indicator Filter")
@@ -69,7 +69,7 @@ public class dma_rc2 implements IStrategy {
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
 
-    private IOrder order = null;
+    private IOrder order = null, prevOrder = null;
     private int counter = 0;
     private double volume = 0.001;
 
@@ -193,6 +193,18 @@ public class dma_rc2 implements IStrategy {
                 order = submitOrder(instrument, OrderCommand.SELL);
             }
         }
+        
+        if (prevOrder != null) {
+            switch (prevOrder.getState()) {
+                case CREATED:
+                case CLOSED:
+                    this.prevOrder = null;
+                    break;
+                default:
+                    //console.getWarn().println(prevOrder.getLabel() +" Closed failed!");
+                    console.getOut().println(prevOrder.getLabel() +" <WARN> Closed failed!");
+            }
+        }
     }
 
     @Override
@@ -243,15 +255,7 @@ public class dma_rc2 implements IStrategy {
             order.close();
             //order.waitForUpdate(200, IOrder.State.CLOSED);
             order.waitForUpdate(200);
-            switch (order.getState()) {
-                case CREATED:
-                case CLOSED:
-                    this.order = null;
-                    break;
-                default:
-                    //console.getWarn().println(order.getLabel() +" Closed failed!");
-                    console.getOut().println(order.getLabel() +" <WARN> Closed failed!");
-            }
+            prevOrder = order;
         }
     }
 
