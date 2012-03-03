@@ -86,15 +86,16 @@ public class sto_rc2 implements IStrategy {
     @Configurable("Start Time (GMT)")
     public String startAt = "00:00";
     @Configurable("Stop Time (GMT)")
-    public String stopAt = "22:00";
+    public String stopAt = "20:00";
 
     private IOrder order;
     private int counter = 0;
 
-    private final static double FACTOR = 0.24;
-    private double risk = riskPercent / 100;
+    private final static double FACTOR = 0.236;
+    private final static double OVERBOUGHT = 80;
+    private final static double OVERSOLD = 20;
     private int hourFrom = 0, minFrom = 0;
-    private int hourTo = 22, minTo = 0;
+    private int hourTo = 0, minTo = 0;
     private long time;
 
     @Override
@@ -118,7 +119,6 @@ public class sto_rc2 implements IStrategy {
         hourTo = Integer.valueOf(stopAt.replaceAll("[:.][0-9]+$", ""));
         minTo = Integer.valueOf(stopAt.replaceAll("^[0-9]+[:.]", ""));
         shortPeriod = period;
-        risk = riskPercent / 100;
     }
 
     @Override
@@ -207,11 +207,11 @@ public class sto_rc2 implements IStrategy {
         boolean isSellSignal = false;
 
         if (stochLong[K][0] > stochLong[D][0] && stochShort[K][0] > stochShort[D][0]
-                && stochLong[K][0] < 80 && stochLong[D][0] < 80 && stochShort[K][0] < 80 && stochShort[D][0] < 80) {
+                && stochLong[K][0] < OVERBOUGHT && stochLong[D][0] < OVERBOUGHT && stochShort[K][0] < OVERBOUGHT && stochShort[D][0] < OVERBOUGHT) {
             isBuySignal = true;
 
         } else if (stochLong[K][0] < stochLong[D][0] && stochShort[K][0] < stochShort[D][0]
-                   && stochLong[K][0] > 20 && stochLong[D][0] > 20 && stochShort[K][0] > 20 && stochShort[D][0] > 20) {
+                   && stochLong[K][0] > OVERSOLD && stochLong[D][0] > OVERSOLD && stochShort[K][0] > OVERSOLD && stochShort[D][0] > OVERSOLD) {
             isSellSignal = true;
         }
 
@@ -223,14 +223,14 @@ public class sto_rc2 implements IStrategy {
 
                 if(isRightTime(askBar.getTime(), hourFrom, minFrom, hourTo, minTo)) {
                     double stopLoss = low;
-                    double minSL = bidBar.getOpen() - getPipPrice(stopLossPips);
+                    double myStopLoss = bidBar.getOpen() - getPipPrice(stopLossPips);
                     double takeProfit = getRoundedPrice(bidBar.getOpen() + (high - low) * FACTOR);
-                    double minTP = bidBar.getOpen() + getPipPrice(takeProfitPips);
+                    double myTakeProfit = bidBar.getOpen() + getPipPrice(takeProfitPips);
 
-                    stopLoss = Math.min(stopLoss, minSL);
-                    takeProfit = Math.max(takeProfit, minTP);
+                    stopLoss = Math.min(stopLoss, myStopLoss);
+                    takeProfit = Math.max(takeProfit, myTakeProfit);
 
-                    if (priceToPips(instrument, takeProfit - bidBar.getClose()) >= FACTOR * 10) {
+                    if (getPricePips(takeProfit - bidBar.getOpen()) >= FACTOR * 10) {
                         order = submitOrder(OrderCommand.BUY, stopLoss, takeProfit);
                     }
                 } else {
@@ -244,14 +244,14 @@ public class sto_rc2 implements IStrategy {
 
                 if(isRightTime(askBar.getTime(), hourFrom, minFrom, hourTo, minTo)) {
                     double stopLoss = high;
-                    double minSL = askBar.getOpen() + getPipPrice(stopLossPips);
+                    double myStopLoss = askBar.getOpen() + getPipPrice(stopLossPips);
                     double takeProfit = getRoundedPrice(askBar.getOpen() - (high - low) * FACTOR);
-                    double minTP = askBar.getOpen() - getPipPrice(takeProfitPips);
+                    double myTakeProfit = askBar.getOpen() - getPipPrice(takeProfitPips);
 
-                    stopLoss = Math.max(stopLoss, minSL);
-                    takeProfit = Math.min(takeProfit, minTP);
+                    stopLoss = Math.max(stopLoss, myStopLoss);
+                    takeProfit = Math.min(takeProfit, myTakeProfit);
 
-                    if (priceToPips(instrument, askBar.getClose() - takeProfit) >= FACTOR * 10) {
+                    if (getPricePips(askBar.getOpen() - takeProfit) >= FACTOR * 10) {
                         order = submitOrder(OrderCommand.SELL, stopLoss, takeProfit);
                     }
                 } else {
@@ -262,35 +262,24 @@ public class sto_rc2 implements IStrategy {
     }
 
     private IOrder submitOrder(OrderCommand orderCmd, double stopLossPrice, double takeProfitPrice) throws JFException {
-        double amount = getAmount(risk, account, instrument, getPipPrice(stopLossPips));
+        double amount = getAmount(account, instrument, riskPercent, getPipPrice(stopLossPips));
         return engine.submitOrder(getLabel(instrument), instrument, orderCmd, amount, 0, slippage, stopLossPrice, takeProfitPrice);
     }
 
-    private void closeOrder(IOrder order) throws JFException {
+    protected void closeOrder(IOrder order) throws JFException {
         if (order != null && isActive(order)) {
             order.close();
         }
     }
 
-    private boolean isActive(IOrder order) throws JFException {
+    protected boolean isActive(IOrder order) throws JFException {
         if (order != null && order.getState() != IOrder.State.CLOSED && order.getState() != IOrder.State.CREATED && order.getState() != IOrder.State.CANCELED) {
             return true;
         }
         return false;
     }
 
-    private double getPipPrice(int pips) {
-        return pips * this.instrument.getPipValue();
-    }
-
-    private String getLabel(Instrument instrument) {
-        String label = instrument.name();
-        label = label + (counter++);
-        label = label.toUpperCase();
-        return label;
-    }
-
-    public boolean isRightTime(long time, int fromHour, int fromMin, int toHour, int toMin) {
+    protected boolean isRightTime(long time, int fromHour, int fromMin, int toHour, int toMin) {
         Calendar start = new GregorianCalendar();
         start.setTimeZone(TimeZone.getTimeZone("GMT"));
         start.setTimeInMillis(time);
@@ -309,37 +298,43 @@ public class sto_rc2 implements IStrategy {
         return false;
     }
 
-    private double getAmount(double risk, IAccount account, Instrument instrument, double lossSEK) throws JFException {
-        // !!! USD EUR and SEK in variable names are used only for simlicity
-        // this method is universal and USD EUR and SEK can be any other currencies
-        double riskUSD = account.getEquity() * risk;
+    protected double getAmount(IAccount account, Instrument instrument, double riskPercent, double stopLossPrice) throws JFException {
+        double riskAmount = account.getEquity() * riskPercent / 100;
 
-        double pipUSD = utils.convertPipToCurrency(instrument, account.getCurrency());
-        double pipSEK = instrument.getPipValue();
+        double pipQuote = utils.convertPipToCurrency(instrument, account.getCurrency());
+        double pipBase = instrument.getPipValue();
 
-        double USDSEK = pipSEK / pipUSD;
-        double riskSEK = riskUSD * USDSEK;
+        double factor = pipBase / pipQuote;
+        double riskPips = riskAmount * factor;
 
-        // amountEUR * lossSEK = riskSEK
-        double amountEUR = riskSEK / lossSEK;
-        double amountMilEUR = amountEUR / 1000000;
+        // volumeBase * stopLossPrice = riskPips
+        double volumeBase = riskPips / stopLossPrice;
+        double volumeBaseInMil = volumeBase / 1000000;
 
-        return getRoundedPrice(amountMilEUR);
+        return getRoundedPrice(volumeBaseInMil);
     }
 
-    private double getRoundedPrice(double price) {
+    protected String getLabel(Instrument instrument) {
+        return id + instrument.name().substring(0, 2) + instrument.name().substring(3, 5) + String.format("%8d", ++counter).replace(" ", "0");
+    }
+
+    protected double getPipPrice(double pips) {
+        return pips * this.instrument.getPipValue();
+    }
+
+    protected double getPricePips(double price) {
+        return price / this.instrument.getPipValue();
+    }
+
+    protected double getRoundedPrice(double price) {
         BigDecimal bd = new BigDecimal(price);
         bd = bd.setScale(instrument.getPipScale() + 1, RoundingMode.HALF_UP);
         return bd.doubleValue();
     }
 
-    private double getRoundedPips(double pips) {
+    protected double getRoundedPips(double pips) {
         BigDecimal bd = new BigDecimal(pips);
         bd = bd.setScale(1, RoundingMode.HALF_UP);
         return bd.doubleValue();
-    }
-
-    protected double priceToPips(Instrument instrument, double price) {
-        return price * Math.pow(10, instrument.getPipScale());
     }
 }
