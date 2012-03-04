@@ -86,7 +86,7 @@ public class sto_rc2 implements IStrategy {
     @Configurable("Stop Time (GMT)")
     public String stopAt = "20:00";
 
-    private IOrder order;
+    private IOrder order = null, prevOrder = null;
     private int counter = 0;
 
     private final static double FACTOR = 0.236;
@@ -231,8 +231,6 @@ public class sto_rc2 implements IStrategy {
                     if (getPricePips(takeProfit - bidBar.getOpen()) >= FACTOR * 10) {
                         order = submitOrder(OrderCommand.BUY, stopLoss, takeProfit);
                     }
-                } else {
-                    order = null;
                 }
             }
         // SELL
@@ -252,9 +250,21 @@ public class sto_rc2 implements IStrategy {
                     if (getPricePips(askBar.getOpen() - takeProfit) >= FACTOR * 10) {
                         order = submitOrder(OrderCommand.SELL, stopLoss, takeProfit);
                     }
-                } else {
-                    order = null;
                 }
+            }
+        }
+
+        if (prevOrder != null) {
+            //prevOrder.waitForUpdate(200, IOrder.State.CLOSED);
+            prevOrder.waitForUpdate(200);
+            switch (prevOrder.getState()) {
+                case CREATED:
+                case CLOSED:
+                    this.prevOrder = null;
+                    break;
+                default:
+                    //console.getWarn().println(prevOrder.getLabel() +" Closed failed!");
+                    console.getOut().println(prevOrder.getLabel() +" <WARN> Closed failed!");
             }
         }
     }
@@ -267,14 +277,17 @@ public class sto_rc2 implements IStrategy {
     protected void closeOrder(IOrder order) throws JFException {
         if (order != null && isActive(order)) {
             order.close();
+            prevOrder = order;
+            order = null;
         }
     }
 
     protected boolean isActive(IOrder order) throws JFException {
-        if (order != null && order.getState() != IOrder.State.CLOSED && order.getState() != IOrder.State.CREATED && order.getState() != IOrder.State.CANCELED) {
-            return true;
-        }
-        return false;
+        if (order == null)
+           return false;
+
+        IOrder.State state = order.getState();
+        return state != IOrder.State.CLOSED && state != IOrder.State.CREATED && state != IOrder.State.CANCELED ? true : false;
     }
 
     protected boolean isRightTime(long time, int fromHour, int fromMin, int toHour, int toMin) {

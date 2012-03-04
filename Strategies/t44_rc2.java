@@ -48,7 +48,7 @@ public class t44_rc2 implements IStrategy {
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
     @Configurable(value="Breakeven (pips)", stepSize=0.5)
-    public double breakevenPips = barsOnSides * 0.0; /* 80% or 10-14 */
+    public double breakevenPips = barsOnSides * 0.0; /* 80% or 10-12 */
     @Configurable(value="Slippage (pips)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
@@ -56,7 +56,7 @@ public class t44_rc2 implements IStrategy {
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
     public double takeProfitPips = 0;
     @Configurable(value="Threshold (pips)", stepSize=0.5)
-    public double thresholdPips = barsOnSides * 1.5; /* 150% or 12-18 pips */
+    public double thresholdPips = barsOnSides * 1.5; /* 150% or 18-20 pips */
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
 
@@ -196,6 +196,8 @@ public class t44_rc2 implements IStrategy {
         }
 
         if (prevOrder != null) {
+            //prevOrder.waitForUpdate(200, IOrder.State.CLOSED);
+            prevOrder.waitForUpdate(200);
             switch (prevOrder.getState()) {
                 case CREATED:
                 case CLOSED:
@@ -272,16 +274,19 @@ public class t44_rc2 implements IStrategy {
     }
 
     protected void closeOrder(IOrder order) throws JFException {
-        if (isActive(order)) {
+        if (order != null && isActive(order)) {
             order.close();
-            //order.waitForUpdate(200, IOrder.State.CLOSED);
-            order.waitForUpdate(200);
             prevOrder = order;
+            order = null;
         }
     }
 
     protected boolean isActive(IOrder order) throws JFException {
-        return (order != null && order.getState() == IOrder.State.FILLED) ? true : false;
+        if (order == null)
+           return false;
+
+        IOrder.State state = order.getState();
+        return state != IOrder.State.CLOSED && state != IOrder.State.CREATED && state != IOrder.State.CANCELED ? true : false;
     }
 
     protected String getLabel(Instrument instrument) {

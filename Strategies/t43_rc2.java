@@ -168,6 +168,8 @@ public class t43_rc2 implements IStrategy {
             return;
 
         if (prevOrder != null) {
+            //prevOrder.waitForUpdate(200, IOrder.State.CLOSED);
+            prevOrder.waitForUpdate(200);
             switch (prevOrder.getState()) {
                 case CREATED:
                 case CLOSED:
@@ -203,6 +205,7 @@ public class t43_rc2 implements IStrategy {
                 order = submitOrder(instrument, OrderCommand.SELL);
             }
         }
+
     }
 
     // Order processing functions
@@ -235,16 +238,19 @@ public class t43_rc2 implements IStrategy {
     }
 
     protected void closeOrder(IOrder order) throws JFException {
-        if (isActive(order)) {
+        if (order != null && isActive(order)) {
             order.close();
-            //order.waitForUpdate(200, IOrder.State.CLOSED);
-            order.waitForUpdate(200);
             prevOrder = order;
+            order = null;
         }
     }
 
     protected boolean isActive(IOrder order) throws JFException {
-        return (order != null && order.getState() == IOrder.State.FILLED) ? true : false;
+        if (order == null)
+           return false;
+
+        IOrder.State state = order.getState();
+        return state != IOrder.State.CLOSED && state != IOrder.State.CREATED && state != IOrder.State.CANCELED ? true : false;
     }
 
     protected String getLabel(Instrument instrument) {
