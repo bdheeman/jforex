@@ -17,11 +17,10 @@
 //
 package jforex.strategies.bdheeman;
 
-import java.util.Arrays;
-import java.text.SimpleDateFormat;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TimeZone;
 
 import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
@@ -46,9 +45,9 @@ public class ttt_rc2 implements IStrategy {
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
     @Configurable("MA Applied Price (Fast)")
-    public AppliedPrice appliedPriceFast = AppliedPrice.WEIGHTED_CLOSE;
+    public AppliedPrice appliedPriceFast = AppliedPrice.CLOSE;
     @Configurable("MA Time Period (Fast)")
-    public int timePeriodFast = 21;
+    public int timePeriodFast = 6;
     @Configurable("MA Type (Fast)")
     public MaType maTypeFast = MaType.TRIMA;
 
@@ -57,7 +56,7 @@ public class ttt_rc2 implements IStrategy {
     @Configurable(value="Slippage (pips)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
-    public double stopLossPips = 20;
+    public double stopLossPips = 0;
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
     public double takeProfitPips = 0;
     @Configurable(value="Close all on Stop? (No)")
@@ -203,14 +202,14 @@ public class ttt_rc2 implements IStrategy {
         ma1 = indicators.ma(instrument, this.period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast, 1);
 
         // Buy/Long
-        if (ma0 > ma1 && ha0[CLOSE] > ha0[OPEN] && ha1[CLOSE] >= ha1[OPEN] && askBar.getClose() > ma0) {
+        if (ma0 < ma1 && ha0[CLOSE] > ha0[OPEN] && ha1[CLOSE] >= ha1[OPEN]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(instrument, OrderCommand.BUY);
             }
         }
         // Sell/Short
-        if (ma0 < ma1 && ha0[CLOSE] < ha0[OPEN] && ha1[CLOSE] <= ha1[OPEN] && bidBar.getClose() < ma0) {
+        if (ma0 > ma1 && ha0[CLOSE] < ha0[OPEN] && ha1[CLOSE] <= ha1[OPEN]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(instrument, OrderCommand.SELL);
@@ -229,18 +228,18 @@ public class ttt_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = roundPrice(bidPrice - getPipPrice(instrument, stopLossPips));
+                stopLossPrice = getRoundedPrice(bidPrice - getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = roundPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
+                takeProfitPrice = getRoundedPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = roundPrice(askPrice + getPipPrice(instrument, stopLossPips));
+                stopLossPrice = getRoundedPrice(askPrice + getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = roundPrice(askPrice - getPipPrice(instrument, takeProfitPips));
+                takeProfitPrice = getRoundedPrice(askPrice - getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -269,15 +268,19 @@ public class ttt_rc2 implements IStrategy {
         return pips * instrument.getPipValue();
     }
 
-    protected double priceToPips(Instrument instrument, double price) {
-        return price * Math.pow(10, instrument.getPipScale());
+    protected double getPricePips(Instrument instrument, double price) {
+        return price / instrument.getPipValue();
     }
 
-    protected double roundPrice(double price) {
-        return price - price % Math.pow(10, (this.instrument.getPipScale() + 1) * -1);
+    protected double getRoundedPips(double pips) {
+        BigDecimal bd = new BigDecimal(pips);
+        bd = bd.setScale(1, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
 
-    protected long roundTime(long time, long milliseconds) throws JFException {
-        return time - time % milliseconds + milliseconds;
+    protected double getRoundedPrice(double price) {
+        BigDecimal bd = new BigDecimal(price);
+        bd = bd.setScale(this.instrument.getPipScale() + 1, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
 }

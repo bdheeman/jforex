@@ -19,8 +19,6 @@ package jforex.strategies.bdheeman;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
@@ -292,10 +290,7 @@ public class sto_rc2 implements IStrategy {
         stop.set(Calendar.HOUR_OF_DAY, toHour);
         stop.set(Calendar.MINUTE, toMin);
 
-        if (start.getTimeInMillis() <= time && time <= stop.getTimeInMillis()) {
-            return true;
-        }
-        return false;
+        return start.getTimeInMillis() <= time && time <= stop.getTimeInMillis() ? true : false;
     }
 
     protected double getAmount(IAccount account, Instrument instrument, double riskPercent, double stopLossPrice) throws JFException {
@@ -326,15 +321,15 @@ public class sto_rc2 implements IStrategy {
         return price / this.instrument.getPipValue();
     }
 
-    protected double getRoundedPrice(double price) {
-        BigDecimal bd = new BigDecimal(price);
-        bd = bd.setScale(instrument.getPipScale() + 1, RoundingMode.HALF_UP);
-        return bd.doubleValue();
-    }
-
     protected double getRoundedPips(double pips) {
         BigDecimal bd = new BigDecimal(pips);
         bd = bd.setScale(1, RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
+
+    protected double getRoundedPrice(double price) {
+        BigDecimal bd = new BigDecimal(price);
+        bd = bd.setScale(this.instrument.getPipScale() + 1, RoundingMode.HALF_UP);
         return bd.doubleValue();
     }
 }

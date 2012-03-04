@@ -17,9 +17,10 @@
 //
 package jforex.strategies.bdheeman;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TimeZone;
 
 import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
@@ -38,6 +39,8 @@ public class dma_rc2 implements IStrategy {
     public Instrument instrument = Instrument.EURUSD;
     @Configurable("Time Frame")
     public Period period = Period.TEN_MINS;
+    //@Configurable("Polling Period")
+    public Period pollingPeriod = Period.ONE_MIN;
 
     @Configurable("Indicator Filter")
     public Filter indicatorFilter = Filter.NO_FILTER;
@@ -50,13 +53,13 @@ public class dma_rc2 implements IStrategy {
     @Configurable("MA Time Period (Fast)")
     public int timePeriodFast = 8;
     @Configurable("MA Type (Fast)")
-    public MaType maTypeFast = MaType.T3;
+    public MaType maTypeFast = MaType.TRIMA;
     //@Configurable("MA Applied Price (Slow)")
     public AppliedPrice appliedPriceSlow = AppliedPrice.CLOSE;
     @Configurable("MA Time Period (Slow)")
     public int timePeriodSlow = 40;
     @Configurable("MA Type (Slow)")
-    public MaType maTypeSlow = MaType.T3;
+    public MaType maTypeSlow = MaType.TRIMA;
 
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
@@ -73,7 +76,7 @@ public class dma_rc2 implements IStrategy {
     private int counter = 0;
     private double volume = 0.001;
 
-    private double[] maf = {Double.NaN},  mas = {Double.NaN};
+    private double[] maf = {Double.NaN}, mas = {Double.NaN};
     private final int PREV = numberOfCandlesBefore + numberOfCandlesAfter - 1;
 
     @Override
@@ -193,7 +196,7 @@ public class dma_rc2 implements IStrategy {
                 order = submitOrder(instrument, OrderCommand.SELL);
             }
         }
-        
+
         if (prevOrder != null) {
             switch (prevOrder.getState()) {
                 case CREATED:
@@ -231,18 +234,18 @@ public class dma_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = roundPrice(bidPrice - getPipPrice(instrument, stopLossPips));
+                stopLossPrice = getRoundedPrice(bidPrice - getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = roundPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
+                takeProfitPrice = getRoundedPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = roundPrice(askPrice + getPipPrice(instrument, stopLossPips));
+                stopLossPrice = getRoundedPrice(askPrice + getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = roundPrice(askPrice - getPipPrice(instrument, takeProfitPips));
+                takeProfitPrice = getRoundedPrice(askPrice - getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -268,10 +271,22 @@ public class dma_rc2 implements IStrategy {
     }
 
     protected double getPipPrice(Instrument instrument, double pips) {
-        return instrument.getPipValue() * pips;
+        return pips * instrument.getPipValue();
     }
 
-    protected double roundPrice(double price) {
-        return price - price % Math.pow(10, (this.instrument.getPipScale() + 1) * -1);
+    protected double getPricePips(Instrument instrument, double price) {
+        return price / instrument.getPipValue();
+    }
+
+    protected double getRoundedPips(double pips) {
+        BigDecimal bd = new BigDecimal(pips);
+        bd = bd.setScale(1, RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
+
+    protected double getRoundedPrice(double price) {
+        BigDecimal bd = new BigDecimal(price);
+        bd = bd.setScale(this.instrument.getPipScale() + 1, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
 }

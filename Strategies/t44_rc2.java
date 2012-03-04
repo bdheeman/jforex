@@ -17,9 +17,10 @@
 //
 package jforex.strategies.bdheeman;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TimeZone;
 
 import com.dukascopy.api.*;
 import com.dukascopy.api.IEngine.OrderCommand;
@@ -170,7 +171,7 @@ public class t44_rc2 implements IStrategy {
             return;
 
         // Is it consolidation, eh
-        if (priceToPips(instrument, askFL[0] - bidFL[0]) < thresholdPips) {
+        if (getPricePips(instrument, askFL[0] - bidFL[0]) < thresholdPips) {
             return;
         }
 
@@ -246,18 +247,18 @@ public class t44_rc2 implements IStrategy {
 
         if (orderCommand == OrderCommand.BUY) {
             if (stopLossPips > 0) {
-                stopLossPrice = roundPrice(bidPrice - getPipPrice(instrument, stopLossPips));
+                stopLossPrice = getRoundedPrice(bidPrice - getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = roundPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
+                takeProfitPrice = getRoundedPrice(bidPrice + getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> BUY #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         } else {
             if (stopLossPips > 0) {
-                stopLossPrice = roundPrice(askPrice + getPipPrice(instrument, stopLossPips));
+                stopLossPrice = getRoundedPrice(askPrice + getPipPrice(instrument, stopLossPips));
             }
             if (takeProfitPips > 0) {
-                takeProfitPrice = roundPrice(askPrice - getPipPrice(instrument, takeProfitPips));
+                takeProfitPrice = getRoundedPrice(askPrice - getPipPrice(instrument, takeProfitPips));
             }
             console.getOut().printf("%s <TWEET> SELL #%s @%f SL %f TP %f\n", label, name, bidPrice, stopLossPrice, takeProfitPrice);
         }
@@ -286,11 +287,19 @@ public class t44_rc2 implements IStrategy {
         return pips * instrument.getPipValue();
     }
 
-    protected double priceToPips(Instrument instrument, double price) {
-        return price * Math.pow(10, instrument.getPipScale());
+    protected double getPricePips(Instrument instrument, double price) {
+        return price / instrument.getPipValue();
     }
 
-    protected double roundPrice(double price) {
-        return price - price % Math.pow(10, (this.instrument.getPipScale() + 1) * -1);
+    protected double getRoundedPips(double pips) {
+        BigDecimal bd = new BigDecimal(pips);
+        bd = bd.setScale(1, RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
+
+    protected double getRoundedPrice(double price) {
+        BigDecimal bd = new BigDecimal(price);
+        bd = bd.setScale(this.instrument.getPipScale() + 1, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
 }
