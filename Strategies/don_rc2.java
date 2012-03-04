@@ -51,7 +51,7 @@ public class don_rc2 implements IStrategy {
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
     @Configurable(value="Breakeven (pips)", stepSize=0.5)
-    public double breakevenPips = dcTimePeriod * 0.0; /* 50% */
+    public double breakevenPips = dcTimePeriod * 0.0; /* 50% or 10-14 pips */
     @Configurable(value="Slippage (pips)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
@@ -59,7 +59,7 @@ public class don_rc2 implements IStrategy {
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
     public double takeProfitPips = 0;
     @Configurable(value="Threshold (pips)", stepSize=0.5)
-    public double thresholdPips = dcTimePeriod * 0.8; /* 80% */
+    public double thresholdPips = dcTimePeriod * 0.0; /* 80% or 12-18 pips */
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
 
@@ -175,23 +175,28 @@ public class don_rc2 implements IStrategy {
         if (bar[PREV-1] == null || bar[PREV] == null)
             return;
 
-        // Is it consolidation, eh
-        if (getPricePips(instrument, dc[UPPER][PREV-1] - dc[LOWER][PREV-1]) < thresholdPips) {
-            return;
-        }
-
         // Buy/Long
         if (tick.getBid() > dc[UPPER][PREV-1] && bar[PREV-1].getClose() > dc[UPPER][PREV-1] && bar[PREV].getClose() <= dc[UPPER][PREV]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(instrument, OrderCommand.BUY);
+
+                if (getPricePips(instrument, dc[UPPER][PREV-1] - dc[LOWER][PREV-1]) > thresholdPips) {
+                    order = submitOrder(instrument, OrderCommand.BUY);
+                } else {
+                    order = null;
+                }
             }
         }
         // Sell/Short
         if (tick.getBid() < dc[LOWER][PREV-1] && bar[PREV-1].getClose() < dc[LOWER][PREV-1] && bar[PREV].getClose() >= dc[LOWER][PREV]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(instrument, OrderCommand.SELL);
+
+                if (getPricePips(instrument, dc[UPPER][PREV-1] - dc[LOWER][PREV-1]) > thresholdPips) {
+                    order = submitOrder(instrument, OrderCommand.SELL);
+                } else {
+                    order = null;
+                }
             }
         }
 

@@ -48,7 +48,7 @@ public class t44_rc2 implements IStrategy {
     @Configurable(value="Risk (percent)", stepSize=0.05)
     public double riskPercent = 2.0;
     @Configurable(value="Breakeven (pips)", stepSize=0.5)
-    public double breakevenPips = barsOnSides * 0.0; /* 80% */
+    public double breakevenPips = barsOnSides * 0.0; /* 80% or 10-14 */
     @Configurable(value="Slippage (pips)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
@@ -56,7 +56,7 @@ public class t44_rc2 implements IStrategy {
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
     public double takeProfitPips = 0;
     @Configurable(value="Threshold (pips)", stepSize=0.5)
-    public double thresholdPips = barsOnSides * 1.6; /* 160% */
+    public double thresholdPips = barsOnSides * 1.5; /* 150% or 12-18 pips */
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
 
@@ -170,23 +170,28 @@ public class t44_rc2 implements IStrategy {
         if (bidBar1 == null || askBar1 == null)
             return;
 
-        // Is it consolidation, eh
-        if (getPricePips(instrument, askFL[0] - bidFL[0]) < thresholdPips) {
-            return;
-        }
-
         // Buy/Long
         if (askBar1.getHigh() <= askFL[1] && tick.getAsk() > askFL[0]) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(instrument, OrderCommand.BUY);
+
+                if (getPricePips(instrument, askFL[0] - bidFL[0]) > thresholdPips) {
+                    order = submitOrder(instrument, OrderCommand.BUY);
+                } else {
+                    order = null;
+                }
             }
         }
         // Sell/Short
         if (bidBar1.getLow() >= bidFL[1] && tick.getBid() < bidFL[0]) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
-                order = submitOrder(instrument, OrderCommand.SELL);
+
+                if (getPricePips(instrument, askFL[0] - bidFL[0]) > thresholdPips) {
+                    order = submitOrder(instrument, OrderCommand.SELL);
+                } else {
+                    order = null;
+                }
             }
         }
 
