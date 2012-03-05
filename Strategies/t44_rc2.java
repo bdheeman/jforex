@@ -56,7 +56,7 @@ public class t44_rc2 implements IStrategy {
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
     public double takeProfitPips = 0;
     @Configurable(value="Threshold (pips)", stepSize=0.5)
-    public double thresholdPips = barsOnSides * 1.5; /* 150% or 18-20 pips */
+    public double thresholdPips = barsOnSides * 1.5; /* 150% or 14-18 pips */
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
 
@@ -94,7 +94,7 @@ public class t44_rc2 implements IStrategy {
                     console.getOut().println(this.order.getLabel() +" <WARN> Order IGNORED, manage it manually");
                 }
                 this.order = order;
-                counter = Integer.valueOf(order.getLabel().replaceAll("[^0-9]",""));
+                counter = Integer.valueOf(order.getLabel().replaceAll("^.{8,8}",""));
                 //console.getNotif().println(order.getLabel() +" Order FOUND, shall try handling it");
                 console.getOut().println(order.getLabel() +" <NOTICE> Order FOUND, shall try handling it");
             }
