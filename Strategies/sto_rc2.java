@@ -105,18 +105,36 @@ public class sto_rc2 implements IStrategy {
         indicators = context.getIndicators();
         utils = context.getUtils();
 
-        // Add indicators for visual testing
-        IChart chart = context.getChart(instrument);
-        if (chart != null && engine.getType() == IEngine.Type.TEST) {
-            chart.addIndicator(indicators.getIndicator("STOCH"), new Object[] {fastKPeriod, slowKPeriod, slowKMaType.ordinal(), slowDPeriod, slowDMaType.ordinal()});
-        }
-
         // re-evaluate configurables
         hourFrom = Integer.valueOf(startAt.replaceAll("[:.][0-9]+$", ""));
         minFrom = Integer.valueOf(startAt.replaceAll("^[0-9]+[:.]", ""));
         hourTo = Integer.valueOf(stopAt.replaceAll("[:.][0-9]+$", ""));
         minTo = Integer.valueOf(stopAt.replaceAll("^[0-9]+[:.]", ""));
         shortPeriod = period;
+
+        // Add indicators for visual testing
+        IChart chart = context.getChart(instrument);
+        if (chart != null && engine.getType() == IEngine.Type.TEST) {
+            chart.addIndicator(indicators.getIndicator("STOCH"), new Object[] {fastKPeriod, slowKPeriod, slowKMaType.ordinal(), slowDPeriod, slowDMaType.ordinal()});
+        }
+
+        // Recall existing; last position, if any
+        this.order = null;
+        for (IOrder order : engine.getOrders(instrument)) {
+            if(order.getLabel().substring(0,id.length()).equals(id)) {
+                if (this.order != null) {
+                    //console.getWarn().println(this.order.getLabel() +" Order IGNORED, manage it manually");
+                    console.getOut().println(this.order.getLabel() +" <WARN> Order IGNORED, manage it manually");
+                }
+                this.order = order;
+                counter = Integer.valueOf(order.getLabel().replaceAll("^.{8,8}",""));
+                //console.getNotif().println(order.getLabel() +" Order FOUND, shall try handling it");
+                console.getOut().println(order.getLabel() +" <NOTICE> Order FOUND, shall try handling it");
+            }
+        }
+        if (isActive(order))
+            //console.getInfo().println(order.getLabel() +" ORDER_FOUND_OK");
+            console.getOut().println(order.getLabel() +" <INFO> ORDER_FOUND_OK");
     }
 
     @Override
