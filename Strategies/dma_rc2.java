@@ -217,7 +217,7 @@ public class dma_rc2 implements IStrategy {
         if (instrument != this.instrument || period != this.period)
             return;
 
-        IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 1);
+        IBar prevBar = history.getBar(instrument, period, OfferSide.BID, 0);
 
         // private double[] maf = {Double.NaN},  mas = {Double.NaN};
         maf = indicators.ma(instrument, period, OfferSide.BID, appliedPriceFast, timePeriodFast, maTypeFast,
