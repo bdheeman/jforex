@@ -60,9 +60,9 @@ public class mcr_rc2 implements IStrategy {
     @Configurable(value="Slippage (pips)", stepSize=0.1)
     public double slippage = 2;
     @Configurable(value="Stop Loss (pips)", stepSize=0.5)
-    public double stopLossPips = 21;
+    public double stopLossPips = 0;
     @Configurable(value="Take Profit (pips)", stepSize=0.5)
-    public double takeProfitPips = 63;
+    public double takeProfitPips = 0;
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
     @Configurable(value="Verbose/Debug? (No)")
@@ -198,14 +198,15 @@ public class mcr_rc2 implements IStrategy {
         double rsi = indicators.rsi(instrument, period, OfferSide.BID, rsiAppliedPrice, rsiPeriod, 0);
 
         // Buy/Long
-        if (cci < 100 && cci > 0 && bidBar.getClose() < ma && rsi < 70 && rsi > 50) {
+        if (cci > 100 && bidBar.getClose() > ma && rsi > 50 && rsi < 60) {
             if (order == null || !order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(instrument, OrderCommand.BUY);
             }
         }
         // Sell/Short
-        else if (cci > -100 && cci < 0 && bidBar.getClose() > ma && rsi > 30 && rsi < 50) {
+        else
+        if (cci < -100 && bidBar.getClose() < ma && rsi > 40 && rsi < 50) {
             if (order == null || order.isLong()) {
                 closeOrder(order);
                 order = submitOrder(instrument, OrderCommand.SELL);
