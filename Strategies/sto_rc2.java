@@ -216,8 +216,8 @@ public class sto_rc2 implements IStrategy {
         double[][] stochLong = indicators.stoch(instrument, longPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, indicatorFilter, 2, askBar.getTime(), 0);
         double[][] stochShort = indicators.stoch(instrument, shortPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, indicatorFilter, 2, askBar.getTime(), 0);
 
-        double high = indicators.max(instrument, period, offerSide,  AppliedPrice.HIGH, swingPeriod, indicatorFilter, 1, askBar.getTime(), 0)[0];
-        double low = indicators.min(instrument, period, offerSide,  AppliedPrice.LOW, swingPeriod, indicatorFilter, 1, askBar.getTime(), 0)[0];
+        double high = indicators.max(instrument, period, offerSide, AppliedPrice.HIGH, swingPeriod, indicatorFilter, 1, askBar.getTime(), 0)[0];
+        double low = indicators.min(instrument, period, offerSide, AppliedPrice.LOW, swingPeriod, indicatorFilter, 1, askBar.getTime(), 0)[0];
 
         boolean isBuySignal = false;
         boolean isSellSignal = false;
@@ -288,7 +288,7 @@ public class sto_rc2 implements IStrategy {
     }
 
     private IOrder submitOrder(Instrument instrument, OrderCommand orderCommand, double stopLossPrice, double takeProfitPrice) throws JFException {
-        double amount = getAmount(account, instrument, riskPercent, stopLossPrice);
+        double amount = getAmount(account, instrument, riskPercent, getPipPrice(stopLossPips));
         return engine.submitOrder(getLabel(instrument), instrument, orderCommand, amount, 0, slippage, stopLossPrice, takeProfitPrice);
     }
 
