@@ -61,7 +61,7 @@ public class ttt_rc2 implements IStrategy {
     public double takeProfitPips = 0;
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
-    @Configurable(value="Verbose/Debug? (No)")
+    //@Configurable(value="Verbose/Debug? (No)")
     public boolean verbose = false;
 
     private IOrder order = null, prevOrder = null;

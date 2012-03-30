@@ -44,7 +44,7 @@ public class sto_rc2 implements IStrategy {
     public Period period = Period.ONE_HOUR;
 
     @Configurable("Indicator Filter")
-    public Filter filter = Filter.ALL_FLATS;
+    public Filter indicatorFilter = Filter.ALL_FLATS;
     //@Configurable("Applied price")
     public AppliedPrice appliedPrice = AppliedPrice.CLOSE;
     //@Configurable("Offer side")
@@ -78,7 +78,7 @@ public class sto_rc2 implements IStrategy {
     public int stopLossPips = 10;
     @Configurable(value="Close all on Stop? (No)")
     public boolean closeAllOnStop = false;
-    @Configurable(value="Verbose/Debug? (No)")
+    //@Configurable(value="Verbose/Debug? (No)")
     public boolean verbose = false;
 
     @Configurable("Start Time (GMT)")
@@ -213,11 +213,11 @@ public class sto_rc2 implements IStrategy {
 
         int K = 0;
         int D = 1;
-        double[][] stochLong = indicators.stoch(instrument, longPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, filter, 2, askBar.getTime(), 0);
-        double[][] stochShort = indicators.stoch(instrument, shortPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, filter, 2, askBar.getTime(), 0);
+        double[][] stochLong = indicators.stoch(instrument, longPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, indicatorFilter, 2, askBar.getTime(), 0);
+        double[][] stochShort = indicators.stoch(instrument, shortPeriod, offerSide, fastKPeriod, slowKPeriod, slowKMaType, slowDPeriod, slowDMaType, indicatorFilter, 2, askBar.getTime(), 0);
 
-        double high = indicators.max(instrument, period, offerSide,  AppliedPrice.HIGH, swingPeriod, filter, 1, askBar.getTime(), 0)[0];
-        double low = indicators.min(instrument, period, offerSide,  AppliedPrice.LOW, swingPeriod, filter, 1, askBar.getTime(), 0)[0];
+        double high = indicators.max(instrument, period, offerSide,  AppliedPrice.HIGH, swingPeriod, indicatorFilter, 1, askBar.getTime(), 0)[0];
+        double low = indicators.min(instrument, period, offerSide,  AppliedPrice.LOW, swingPeriod, indicatorFilter, 1, askBar.getTime(), 0)[0];
 
         boolean isBuySignal = false;
         boolean isSellSignal = false;
