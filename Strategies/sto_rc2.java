@@ -247,7 +247,7 @@ public class sto_rc2 implements IStrategy {
                     takeProfit = Math.max(takeProfit, myTakeProfit);
 
                     if (getPricePips(takeProfit - bidBar.getOpen()) >= FACTOR * 10) {
-                        order = submitOrder(OrderCommand.BUY, stopLoss, takeProfit);
+                        order = submitOrder(instrument, OrderCommand.BUY, stopLoss, takeProfit);
                     }
                 }
             }
@@ -266,7 +266,7 @@ public class sto_rc2 implements IStrategy {
                     takeProfit = Math.min(takeProfit, myTakeProfit);
 
                     if (getPricePips(askBar.getOpen() - takeProfit) >= FACTOR * 10) {
-                        order = submitOrder(OrderCommand.SELL, stopLoss, takeProfit);
+                        order = submitOrder(instrument, OrderCommand.SELL, stopLoss, takeProfit);
                     }
                 }
             }
@@ -287,9 +287,9 @@ public class sto_rc2 implements IStrategy {
         }
     }
 
-    private IOrder submitOrder(OrderCommand orderCmd, double stopLossPrice, double takeProfitPrice) throws JFException {
-        double amount = getAmount(account, instrument, riskPercent, getPipPrice(stopLossPips));
-        return engine.submitOrder(getLabel(instrument), instrument, orderCmd, amount, 0, slippage, stopLossPrice, takeProfitPrice);
+    private IOrder submitOrder(Instrument instrument, OrderCommand orderCommand, double stopLossPrice, double takeProfitPrice) throws JFException {
+        double amount = getAmount(account, instrument, riskPercent, stopLossPrice);
+        return engine.submitOrder(getLabel(instrument), instrument, orderCommand, amount, 0, slippage, stopLossPrice, takeProfitPrice);
     }
 
     protected void closeOrder(IOrder order) throws JFException {
