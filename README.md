@@ -12,12 +12,12 @@ respective platform <http://www.dukascopy.com/swiss/english/forex/jforex/>
 
 See also:
 
-    * Why trade Currencies and, or Forex? <http://bitly.com/AjDIxv>
-    * Beware of all the Risks Involved <http://bitly.com/xe8IFa>
-    * Limiting Risk in Forex Trading <http://bitly.com/yMbkiT>
-    * Things to know, the Brokers won’t tell you <http://bitly.com/FRYyFR>
-    * Does a Perfect FOREX Trading System exists? <http://bitly.com/HOx87k>
-    * The 5 Fatal Flaws and your FOREX Trading <http://bitly.com/Luz1YP>
+    * Why trade Currencies and, or Forex? <http://bitly.com/1aqBWAe>
+    * Beware of all the Risks Involved <http://bitly.com/1BXABaJ>
+    * Limiting Risk in Forex Trading <http://bitly.com/19RTS5M>
+    * Things to know, the Brokers won’t tell you <http://bitly.com/1IagrRV>
+    * Does a Perfect FOREX Trading System exists? <http://bitly.com/1IagxJq>
+    * The 5 Fatal Flaws and your FOREX Trading <http://bitly.com/1HrsTJt>
 
 Happy Forex Trading :)
 
